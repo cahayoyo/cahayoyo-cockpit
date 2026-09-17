@@ -8,7 +8,7 @@
 	import { onDestroy } from 'svelte';
 	import type { BookmarkView } from '$lib/bookmarks/params.js';
 	import type { SortKey } from '$lib/bookmarks/filters.js';
-	import { ROOT_FOLDER_ID } from '$lib/bookmarks/filters.js';
+	import { ROOT_FOLDER_ID } from '$lib/folders/tree.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';

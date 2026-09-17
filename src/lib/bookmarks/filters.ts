@@ -1,10 +1,8 @@
+import { ROOT_FOLDER_ID } from '$lib/folders/tree';
+
 export const SORT_KEYS = ['newest', 'title'] as const;
 
 export type SortKey = (typeof SORT_KEYS)[number];
-
-// Virtual root scope. The root is not a row in `folder`: unfiled bookmarks
-// (`folder_id IS NULL`) render in it.
-export const ROOT_FOLDER_ID = 'root';
 
 export type FilterableBookmark = {
 	title: string;

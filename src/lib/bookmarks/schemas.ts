@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { parseTags } from './tags';
+import { parseTags } from '$lib/tags';
 import { validateUpload } from './upload';
 
 export const bookmarkFormSchema = z.object({
@@ -13,13 +13,6 @@ export const bookmarkFormSchema = z.object({
 });
 
 export type BookmarkFormInput = z.infer<typeof bookmarkFormSchema>;
-
-export const folderFormSchema = z.object({
-	name: z.string().trim().min(1, 'Name is required.').max(100, 'Name is too long.'),
-	parentId: z.uuid().nullable()
-});
-
-export type FolderFormInput = z.infer<typeof folderFormSchema>;
 
 export const mediaUploadSchema = z.file().superRefine((file, ctx) => {
 	const error = validateUpload(file);

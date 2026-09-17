@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { ROOT_FOLDER_ID, SORT_KEYS, type BookmarkFilters } from './filters';
+import { ROOT_FOLDER_ID } from '$lib/folders/tree';
+import { SORT_KEYS, type BookmarkFilters } from './filters';
 
 export const bookmarkSearchSchema = z.object({
 	q: z.string().trim().catch(''),

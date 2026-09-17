@@ -13,13 +13,13 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
-	import { ROOT_FOLDER_ID } from '$lib/bookmarks/filters.js';
 	import {
 		ancestorIds,
 		buildFolderTree,
+		ROOT_FOLDER_ID,
 		type FolderNode,
 		type FolderRow
-	} from '$lib/bookmarks/tree.js';
+	} from '$lib/folders/tree.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { cn } from '$lib/utils.js';
 	import { submitAction } from './actions.js';

@@ -1,21 +1,20 @@
 import { fail } from '@sveltejs/kit';
 import { z } from 'zod';
-import { filterBookmarks, ROOT_FOLDER_ID } from '$lib/bookmarks/filters';
+import { filterBookmarks } from '$lib/bookmarks/filters';
 import { parseBookmarkSearch, parseBookmarkView } from '$lib/bookmarks/params';
-import { bookmarkFormSchema, folderFormSchema } from '$lib/bookmarks/schemas';
+import { bookmarkFormSchema } from '$lib/bookmarks/schemas';
+import { folderFormSchema } from '$lib/folders/schemas';
+import { ROOT_FOLDER_ID } from '$lib/folders/tree';
 import {
 	createBookmark,
-	createFolder,
 	deleteBookmark,
-	deleteFolder,
 	listBookmarks,
-	listFolders,
-	listTags,
-	renameFolder,
 	setBookmarkFavorite,
 	updateBookmark
 } from '$lib/server/bookmarks';
+import { createFolder, deleteFolder, listFolders, renameFolder } from '$lib/server/folders';
 import { deleteMedia, getMediaFile, listMedia, saveMedia } from '$lib/server/media';
+import { listTags } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
 const idSchema = z.uuid();
@@ -193,8 +192,15 @@ export const actions: Actions = {
 
 		const result = await deleteMedia(id);
 		if (!result.ok) {
+			const usedBy = [
+				result.bookmarkCount > 0
+					? `${result.bookmarkCount} bookmark${result.bookmarkCount === 1 ? '' : 's'}`
+					: '',
+				result.noteCount > 0 ? `${result.noteCount} note${result.noteCount === 1 ? '' : 's'}` : ''
+			].filter(Boolean);
+
 			return fail(409, {
-				message: `This image is used by ${result.usageCount} bookmark${result.usageCount === 1 ? '' : 's'} and cannot be deleted.`
+				message: `This image is used by ${usedBy.join(' and ')} and cannot be deleted.`
 			});
 		}
 
