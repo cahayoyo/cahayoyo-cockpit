@@ -184,7 +184,7 @@
 		<button
 			type="button"
 			class={cn(
-				'shrink-0 rounded px-0.5 transition-colors hover:text-foreground',
+				'shrink-0 rounded px-0.5 transition-colors hover:text-foreground max-lg:min-h-11 max-lg:px-2',
 				breadcrumb.length === 0 && 'font-medium text-foreground'
 			)}
 			onclick={() => onOpenFolder(ROOT_FOLDER_ID)}
@@ -196,7 +196,7 @@
 			<button
 				type="button"
 				class={cn(
-					'truncate rounded px-0.5 transition-colors hover:text-foreground',
+					'truncate rounded px-0.5 transition-colors hover:text-foreground max-lg:min-h-11 max-lg:px-2',
 					index === breadcrumb.length - 1 && 'font-medium text-foreground'
 				)}
 				onclick={() => onOpenFolder(crumb.id)}
@@ -352,11 +352,13 @@
 				{#if q.trim() !== ''}
 					<SearchX class="size-6 text-muted-foreground" />
 					<p class="text-sm text-muted-foreground">{emptyMessage}</p>
-					<Button variant="outline" size="sm" onclick={clearSearch}>Clear</Button>
+					<Button variant="outline" size="sm" class="max-lg:h-11" onclick={clearSearch}
+						>Clear</Button
+					>
 				{:else}
 					<NotebookPen class="size-6 text-muted-foreground" />
 					<p class="text-sm text-muted-foreground">{emptyMessage}</p>
-					<Button size="sm" class="gap-1.5" onclick={onCreate}>
+					<Button size="sm" class="gap-1.5 max-lg:h-11" onclick={onCreate}>
 						<Plus class="size-4" /> New note
 					</Button>
 				{/if}

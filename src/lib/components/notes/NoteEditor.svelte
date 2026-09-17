@@ -13,6 +13,7 @@
 	import { markdown } from '@codemirror/lang-markdown';
 	import { basicSetup, EditorView } from 'codemirror';
 	import { beforeNavigate, invalidateAll } from '$app/navigation';
+	import { navigating } from '$app/state';
 	import { onMount, untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { validateUpload } from '$lib/bookmarks/upload.js';
@@ -105,7 +106,9 @@
 		if (id === null) return;
 
 		const next = reduceSaveState(saveState, { type: 'save-start' });
-		if (next.status !== 'saving') return;
+		// Proceed only on a real dirty/failed → saving transition: a flush that fires
+		// while a save is already in flight (blur + navigation) must not double-post.
+		if (next.status !== 'saving' || saveState.status === 'saving') return;
 		saveState = next;
 
 		const outcome = await submitAction(
@@ -125,7 +128,9 @@
 				if (saveState.status === 'dirty') scheduleSave();
 			}
 			// Refresh the list row (title, snippet, order) even for a note we just left.
-			if (!keepalive) void invalidateAll();
+			// Skipped mid-navigation: invalidateAll() during a client-side navigation
+			// cancels it, which would strand the user on the page they are leaving.
+			if (!keepalive && navigating.to === null) void invalidateAll();
 		} else {
 			// A late failure for a note we already switched away from cannot restore
 			// its dirty state, but the user must still know the edit did not persist.
@@ -365,7 +370,7 @@
 	</Button>
 	<input
 		bind:this={titleEl}
-		class="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none placeholder:text-muted-foreground"
+		class="min-w-0 flex-1 bg-transparent text-xl font-semibold outline-none placeholder:text-muted-foreground max-lg:h-11"
 		aria-label="Note title"
 		placeholder="Untitled"
 		bind:value={title}

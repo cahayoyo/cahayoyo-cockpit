@@ -23,13 +23,21 @@ export async function submitAction(
 		body.append(key, value);
 	}
 
-	const response = await fetch(action, {
-		method: 'POST',
-		body,
-		headers: { accept: 'application/json' },
-		keepalive: options.keepalive ?? false
-	});
-	const result = deserialize(await response.text());
+	// A blocked request (offline, proxy error, aborted fetch) or a non-SvelteKit
+	// body (5xx HTML page) must become a failure outcome: callers drive save-state
+	// machines and toasts from this result, never from a thrown exception.
+	let result: ReturnType<typeof deserialize>;
+	try {
+		const response = await fetch(action, {
+			method: 'POST',
+			body,
+			headers: { accept: 'application/json' },
+			keepalive: options.keepalive ?? false
+		});
+		result = deserialize(await response.text());
+	} catch {
+		return { ok: false, message: 'Something went wrong.' };
+	}
 
 	if (options.invalidate !== false) {
 		await invalidateAll();
