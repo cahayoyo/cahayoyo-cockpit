@@ -124,10 +124,7 @@
 						<div class="min-w-0 flex-1">
 							<p class="truncate text-xs">{item.originalName}</p>
 							<p class="text-xs text-muted-foreground">
-								{formatBytes(item.sizeBytes)} ·
-								{item.usageCount > 0
-									? ` used by ${item.usageCount} ${item.usageCount === 1 ? 'bookmark' : 'bookmarks'}`
-									: ' unused'}
+								{formatBytes(item.sizeBytes)} · {item.usageCount > 0 ? 'in use' : 'unused'}
 							</p>
 						</div>
 						<Button
@@ -138,7 +135,7 @@
 							disabled={item.usageCount > 0}
 							aria-label="Delete {item.originalName}"
 							title={item.usageCount > 0
-								? 'Cannot delete while bookmarks use this image'
+								? 'Cannot delete while a bookmark or note uses this image'
 								: 'Delete image'}
 							onclick={() => askDelete(item)}
 						>

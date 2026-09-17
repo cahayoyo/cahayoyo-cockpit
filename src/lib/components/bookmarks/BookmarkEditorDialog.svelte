@@ -6,7 +6,7 @@
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
 	import { failureMessage } from './actions.js';
-	import type { FolderRow } from '$lib/bookmarks/tree.js';
+	import type { FolderRow } from '$lib/folders/tree.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';

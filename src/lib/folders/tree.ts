@@ -1,3 +1,8 @@
+// Virtual root scope shared by every module that files into the folder tree.
+// The root is not a row in `folder`: top-level folders have no parent and
+// unfiled items (`folder_id IS NULL`) render in it.
+export const ROOT_FOLDER_ID = 'root';
+
 export type FolderRow = {
 	id: string;
 	name: string;

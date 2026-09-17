@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import { ROOT_FOLDER_ID } from '$lib/folders/tree';
 import type { BookmarkFilters } from './filters';
-import { ROOT_FOLDER_ID } from './filters';
 import { buildBookmarkSearch, parseBookmarkSearch, parseBookmarkView } from './params';
 
 const FOLDER_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';

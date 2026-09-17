@@ -6,13 +6,13 @@
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import FolderIcon from '@lucide/svelte/icons/folder';
 	import FolderPlus from '@lucide/svelte/icons/folder-plus';
-	import { ROOT_FOLDER_ID } from '$lib/bookmarks/filters.js';
 	import {
 		buildFolderTree,
 		folderLabel,
+		ROOT_FOLDER_ID,
 		type FolderNode,
 		type FolderRow
-	} from '$lib/bookmarks/tree.js';
+	} from '$lib/folders/tree.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { cn } from '$lib/utils.js';
 

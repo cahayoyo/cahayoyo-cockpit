@@ -1,12 +1,12 @@
-import { asc, eq, inArray } from 'drizzle-orm';
-import type { BookmarkFormInput, FolderFormInput } from '$lib/bookmarks/schemas';
+import { asc, eq } from 'drizzle-orm';
+import type { BookmarkFormInput } from '$lib/bookmarks/schemas';
+import { groupTagNames } from '$lib/tags';
+import type { Transaction } from './db';
 import { db } from './db';
-import { bookmark, bookmarkTag, folder, tag } from './db/schema';
+import { bookmark, bookmarkTag, tag } from './db/schema';
+import { ensureTagIds } from './tags';
 
 export type BookmarkListItem = typeof bookmark.$inferSelect & { tags: string[] };
-export type FolderListItem = typeof folder.$inferSelect;
-
-type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export async function listBookmarks(): Promise<BookmarkListItem[]> {
 	const rows = await db.select().from(bookmark).orderBy(asc(bookmark.createdAt));
@@ -15,41 +15,23 @@ export async function listBookmarks(): Promise<BookmarkListItem[]> {
 	}
 
 	const links = await db
-		.select({ bookmarkId: bookmarkTag.bookmarkId, name: tag.name })
+		.select({ id: bookmarkTag.bookmarkId, name: tag.name })
 		.from(bookmarkTag)
 		.innerJoin(tag, eq(bookmarkTag.tagId, tag.id))
 		.orderBy(asc(tag.name));
 
-	const tagsByBookmark = new Map<string, string[]>();
-	for (const link of links) {
-		const names = tagsByBookmark.get(link.bookmarkId) ?? [];
-		names.push(link.name);
-		tagsByBookmark.set(link.bookmarkId, names);
-	}
+	const tagsByBookmark = groupTagNames(links);
 
 	return rows.map((row) => ({ ...row, tags: tagsByBookmark.get(row.id) ?? [] }));
 }
 
-export async function listFolders(): Promise<FolderListItem[]> {
-	return db.select().from(folder).orderBy(asc(folder.name));
-}
-
-export async function listTags(): Promise<string[]> {
-	const rows = await db.select({ name: tag.name }).from(tag).orderBy(asc(tag.name));
-	return rows.map((row) => row.name);
-}
-
 async function attachTags(tx: Transaction, bookmarkId: string, names: string[]): Promise<void> {
-	if (names.length === 0) {
+	const tagIds = await ensureTagIds(tx, names);
+	if (tagIds.length === 0) {
 		return;
 	}
 
-	for (const name of names) {
-		await tx.insert(tag).values({ name }).onConflictDoNothing({ target: tag.name });
-	}
-
-	const rows = await tx.select({ id: tag.id }).from(tag).where(inArray(tag.name, names));
-	await tx.insert(bookmarkTag).values(rows.map((row) => ({ bookmarkId, tagId: row.id })));
+	await tx.insert(bookmarkTag).values(tagIds.map((tagId) => ({ bookmarkId, tagId })));
 }
 
 function bookmarkValues(input: BookmarkFormInput) {
@@ -99,23 +81,4 @@ export async function deleteBookmark(id: string): Promise<void> {
 
 export async function setBookmarkFavorite(id: string, favorite: boolean): Promise<void> {
 	await db.update(bookmark).set({ favorite }).where(eq(bookmark.id, id));
-}
-
-export async function createFolder(input: FolderFormInput): Promise<string> {
-	const [row] = await db
-		.insert(folder)
-		.values({ name: input.name, parentId: input.parentId })
-		.returning({ id: folder.id });
-
-	return row.id;
-}
-
-export async function renameFolder(id: string, name: string): Promise<void> {
-	await db.update(folder).set({ name }).where(eq(folder.id, id));
-}
-
-export async function deleteFolder(id: string): Promise<void> {
-	// Subtree removal and unfiling of contained bookmarks happen in the DB's
-	// FK actions (folder.parent_id CASCADE, bookmark.folder_id SET NULL).
-	await db.delete(folder).where(eq(folder.id, id));
 }

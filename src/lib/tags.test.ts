@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { parseTags } from './tags';
+import { groupTagNames, parseTags } from './tags';
 
 describe('parseTags', () => {
 	test('splits on commas and trims each value', () => {
@@ -21,5 +21,22 @@ describe('parseTags', () => {
 	test('returns an empty list for empty input', () => {
 		expect(parseTags('')).toEqual([]);
 		expect(parseTags(' , , ')).toEqual([]);
+	});
+});
+
+describe('groupTagNames', () => {
+	test('groups names per owner, preserving the incoming order', () => {
+		const grouped = groupTagNames([
+			{ id: 'a', name: 'docs' },
+			{ id: 'b', name: 'qa' },
+			{ id: 'a', name: 'release' }
+		]);
+
+		expect(grouped.get('a')).toEqual(['docs', 'release']);
+		expect(grouped.get('b')).toEqual(['qa']);
+	});
+
+	test('returns an empty map for no links', () => {
+		expect(groupTagNames([]).size).toBe(0);
 	});
 });

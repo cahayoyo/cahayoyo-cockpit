@@ -6,9 +6,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { navigating, page } from '$app/state';
-	import { ROOT_FOLDER_ID } from '$lib/bookmarks/filters.js';
+	import { ROOT_FOLDER_ID } from '$lib/folders/tree.js';
 	import { buildBookmarkSearch } from '$lib/bookmarks/params.js';
-	import { folderIdsWithDescendants, type FolderRow } from '$lib/bookmarks/tree.js';
+	import { folderIdsWithDescendants, type FolderRow } from '$lib/folders/tree.js';
 	import BookmarkEditorDialog from '$lib/components/bookmarks/BookmarkEditorDialog.svelte';
 	import BookmarkGrid from '$lib/components/bookmarks/BookmarkGrid.svelte';
 	import BookmarkList from '$lib/components/bookmarks/BookmarkList.svelte';

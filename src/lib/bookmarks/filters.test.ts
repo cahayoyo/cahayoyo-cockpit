@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import {
-	filterBookmarks,
-	ROOT_FOLDER_ID,
-	type BookmarkFilters,
-	type FilterableBookmark
-} from './filters';
+import { ROOT_FOLDER_ID } from '$lib/folders/tree';
+import { filterBookmarks, type BookmarkFilters, type FilterableBookmark } from './filters';
 
 type Row = FilterableBookmark & { id: string };
 
