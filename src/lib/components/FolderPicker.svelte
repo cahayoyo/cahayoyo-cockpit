@@ -1,8 +1,9 @@
 <script lang="ts">
 	// Editor folder menu — browser-style: hovering a folder row opens its children in a
 	// submenu (nested to any depth); clicking the row picks that folder. "New folder" in a
-	// menu level creates a folder there and picks it. The top item ("Bookmarks bar") means
-	// no folder: unfiled bookmarks live in the root.
+	// menu level creates a folder there and picks it. The top item is the virtual root: its
+	// label is contextual per view ("Bookmarks bar" / "Notes") and means no folder.
+	// Shared by Bookmarks and Notes.
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import FolderIcon from '@lucide/svelte/icons/folder';
 	import FolderPlus from '@lucide/svelte/icons/folder-plus';
@@ -20,20 +21,22 @@
 		value = $bindable(null),
 		folders,
 		label,
+		rootLabel,
 		oncreate,
+		onpick,
 		class: className
 	}: {
 		value?: string | null;
 		folders: FolderRow[];
 		label: string;
+		rootLabel: string;
 		oncreate: (parentId: string | null, name: string) => Promise<string | null>;
+		onpick?: (id: string | null) => void;
 		class?: string;
 	} = $props();
 
 	const tree = $derived(buildFolderTree(folders));
-	const currentLabel = $derived(
-		value ? folderLabel(folders, value) || 'Bookmarks bar' : 'Bookmarks bar'
-	);
+	const currentLabel = $derived(value ? folderLabel(folders, value) || rootLabel : rootLabel);
 
 	let open = $state(false);
 	let creating = $state<string | null>(null);
@@ -42,6 +45,7 @@
 	function pick(id: string | null): void {
 		value = id;
 		open = false;
+		onpick?.(id);
 	}
 
 	function startCreate(containerId: string): void {
@@ -138,7 +142,7 @@
 	<DropdownMenu.Content class="w-56" align="start">
 		<DropdownMenu.Item class="gap-2" onSelect={() => pick(null)}>
 			<FolderIcon class="size-4 text-muted-foreground" />
-			Bookmarks bar
+			{rootLabel}
 		</DropdownMenu.Item>
 		<DropdownMenu.Separator />
 

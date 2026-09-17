@@ -22,7 +22,7 @@
 	} from '$lib/folders/tree.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { cn } from '$lib/utils.js';
-	import { submitAction } from './actions.js';
+	import { submitAction } from '$lib/forms.js';
 
 	let {
 		folders,

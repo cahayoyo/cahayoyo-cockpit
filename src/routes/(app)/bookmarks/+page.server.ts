@@ -12,6 +12,7 @@ import {
 	setBookmarkFavorite,
 	updateBookmark
 } from '$lib/server/bookmarks';
+import { optionalId, requiredId, text } from '$lib/server/form-data';
 import { createFolder, deleteFolder, listFolders, renameFolder } from '$lib/server/folders';
 import { deleteMedia, getMediaFile, listMedia, saveMedia } from '$lib/server/media';
 import { listTags } from '$lib/server/tags';
@@ -19,23 +20,6 @@ import type { Actions, PageServerLoad } from './$types.js';
 
 const idSchema = z.uuid();
 const favoriteSchema = z.enum(['true', 'false']);
-
-function text(formData: FormData, key: string): string {
-	const value = formData.get(key);
-	return typeof value === 'string' ? value : '';
-}
-
-/** Field that may be absent ('' = none) but must be a UUID when present. */
-function optionalId(formData: FormData, key: string): string | null {
-	const value = text(formData, key);
-	return value === '' ? null : value;
-}
-
-/** UUID field that must be present; null when missing or malformed. */
-function requiredId(formData: FormData, key = 'id'): string | null {
-	const parsed = idSchema.safeParse(text(formData, key));
-	return parsed.success ? parsed.data : null;
-}
 
 export const load: PageServerLoad = async ({ url }) => {
 	const filters = parseBookmarkSearch(url.searchParams);

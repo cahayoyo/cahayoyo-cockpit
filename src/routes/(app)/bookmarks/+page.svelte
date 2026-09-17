@@ -12,11 +12,11 @@
 	import BookmarkEditorDialog from '$lib/components/bookmarks/BookmarkEditorDialog.svelte';
 	import BookmarkGrid from '$lib/components/bookmarks/BookmarkGrid.svelte';
 	import BookmarkList from '$lib/components/bookmarks/BookmarkList.svelte';
-	import ConfirmDialog from '$lib/components/bookmarks/ConfirmDialog.svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import FolderSidebar from '$lib/components/bookmarks/FolderSidebar.svelte';
 	import Toolbar from '$lib/components/bookmarks/Toolbar.svelte';
 	import type { BookmarkItem, FilterPatch, ViewProps } from '$lib/components/bookmarks/types.js';
-	import { submitAction } from '$lib/components/bookmarks/actions.js';
+	import { submitAction } from '$lib/forms.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import type { PageProps } from './$types.js';

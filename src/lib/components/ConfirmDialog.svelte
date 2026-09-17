@@ -1,10 +1,10 @@
 <script lang="ts">
 	// Confirmation dialog for destructive actions: an explicit verb on the button and the
-	// record's identity in the description (DESIGN.md > Dialog).
+	// record's identity in the description (DESIGN.md > Dialog). Shared by Bookmarks and Notes.
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
-	import { failureMessage } from './actions.js';
+	import { failureMessage } from '$lib/forms.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 

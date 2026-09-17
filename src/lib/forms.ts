@@ -10,10 +10,13 @@ export function failureMessage(data: unknown): string {
 }
 
 // Most mutations run through <form use:enhance>; this calls a form action directly
-// for interactions that only exist with JS (inline inputs inside menus).
+// for interactions that only exist with JS (inline inputs, autosave, uploads).
+// File/Blob values are supported for multipart boundaries (e.g. image uploads);
+// `keepalive` lets a navigation flush finish after the page unloads.
 export async function submitAction(
 	action: string,
-	values: Record<string, string>
+	values: Record<string, string | Blob>,
+	options: { invalidate?: boolean; keepalive?: boolean } = {}
 ): Promise<ActionOutcome> {
 	const body = new FormData();
 	for (const [key, value] of Object.entries(values)) {
@@ -23,11 +26,14 @@ export async function submitAction(
 	const response = await fetch(action, {
 		method: 'POST',
 		body,
-		headers: { accept: 'application/json' }
+		headers: { accept: 'application/json' },
+		keepalive: options.keepalive ?? false
 	});
 	const result = deserialize(await response.text());
 
-	await invalidateAll();
+	if (options.invalidate !== false) {
+		await invalidateAll();
+	}
 
 	if (result.type === 'success') {
 		return { ok: true, data: result.data ?? {} };

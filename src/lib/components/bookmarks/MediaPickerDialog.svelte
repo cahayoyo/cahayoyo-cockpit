@@ -7,12 +7,12 @@
 	import Upload from '@lucide/svelte/icons/upload';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
-	import { failureMessage } from './actions.js';
+	import { failureMessage } from '$lib/forms.js';
 	import { formatBytes } from '$lib/bookmarks/format.js';
 	import { validateUpload } from '$lib/bookmarks/upload.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import ConfirmDialog from './ConfirmDialog.svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import ImageCropDialog from './ImageCropDialog.svelte';
 	import type { MediaItem } from './types.js';
 
