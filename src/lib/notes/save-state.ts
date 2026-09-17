@@ -1,6 +1,4 @@
-export const NOTE_SAVE_STATUSES = ['clean', 'dirty', 'saving', 'saved', 'failed'] as const;
-
-export type NoteSaveStatus = (typeof NOTE_SAVE_STATUSES)[number];
+export type NoteSaveStatus = 'clean' | 'dirty' | 'saving' | 'saved' | 'failed';
 
 export type NoteSaveState = {
 	status: NoteSaveStatus;
