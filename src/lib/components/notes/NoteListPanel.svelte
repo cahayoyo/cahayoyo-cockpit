@@ -155,7 +155,7 @@
 				class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
 			/>
 			<Input
-				class="pl-8"
+				class="pl-8 max-lg:h-11"
 				placeholder="Search notes"
 				aria-label="Search notes"
 				bind:value={draft}
@@ -217,11 +217,10 @@
 						)}
 					>
 						{#if renamingId === child.id}
-							<!-- svelte-ignore a11y_autofocus -->
-							<input
+							<Input
 								autofocus
 								bind:value={renamingDraft}
-								class="mr-1 my-0.5 ml-1 h-7 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:ring-2 max-lg:h-11"
+								class="my-0.5 mr-1 ml-1 h-7 min-w-0 flex-1 rounded-md px-2 text-sm max-lg:h-11"
 								aria-label={`Rename ${child.name}`}
 								onkeydown={onNameKeydown}
 								onblur={commitRename}
@@ -269,12 +268,11 @@
 				{/each}
 				{#if creating}
 					<li>
-						<!-- svelte-ignore a11y_autofocus -->
-						<input
+						<Input
 							autofocus
 							bind:value={creatingDraft}
 							placeholder="New folder"
-							class="my-0.5 h-7 w-full min-w-0 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:ring-2 max-lg:h-11"
+							class="my-0.5 h-7 w-full min-w-0 rounded-md px-2 text-sm max-lg:h-11"
 							aria-label="New folder name"
 							onkeydown={onNameKeydown}
 							onblur={commitCreate}

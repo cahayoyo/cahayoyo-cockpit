@@ -127,11 +127,12 @@
 	}
 
 	function askDeleteNote(note: NoteItem): void {
-		// After a delete the selection moves to the next note in list order — but only
-		// when the deleted note was the selected one.
+		// After a delete the selection moves to the next note in list order, or to the
+		// empty selection state when there is none — but only when the deleted note
+		// was the selected one.
 		const order = visible;
 		const index = order.findIndex((item) => item.id === note.id);
-		const next = order[index + 1] ?? order[index - 1] ?? null;
+		const next = order[index + 1] ?? null;
 		confirming = {
 			kind: 'note',
 			id: note.id,

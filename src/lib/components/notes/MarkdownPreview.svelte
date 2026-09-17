@@ -64,14 +64,14 @@
 	}
 	.md-preview :global(code) {
 		background: var(--muted);
-		border-radius: 0.25rem;
+		border-radius: var(--radius-sm);
 		padding: 0.1rem 0.3rem;
 		font-size: 0.85em;
 	}
 	.md-preview :global(pre) {
 		background: var(--muted);
 		border: 1px solid var(--border);
-		border-radius: 0.5rem;
+		border-radius: var(--radius-md);
 		margin: 0.75rem 0;
 		overflow-x: auto;
 		padding: 0.75rem;
@@ -108,7 +108,7 @@
 		margin: 1rem 0;
 	}
 	.md-preview :global(img) {
-		border-radius: 0.5rem;
+		border-radius: var(--radius-md);
 		max-width: 100%;
 	}
 	.md-preview :global(input[type='checkbox']) {

@@ -11,6 +11,22 @@ export type NoteListItem = typeof note.$inferSelect & { tags: string[]; snippet:
 
 const UNTITLED = 'Untitled';
 
+// Tag names per note, ordered alphabetically, for the given note ids.
+async function tagsByNoteId(ids: string[]): Promise<Map<string, string[]>> {
+	if (ids.length === 0) {
+		return new Map();
+	}
+
+	const links = await db
+		.select({ id: noteTag.noteId, name: tag.name })
+		.from(noteTag)
+		.innerJoin(tag, eq(noteTag.tagId, tag.id))
+		.where(inArray(noteTag.noteId, ids))
+		.orderBy(asc(tag.name));
+
+	return groupTagNames(links);
+}
+
 // A non-empty query is the global search: it matches titles and bodies
 // case-insensitively and ignores the folder scope.
 export async function listNotes(query = ''): Promise<NoteListItem[]> {
@@ -24,23 +40,7 @@ export async function listNotes(query = ''): Promise<NoteListItem[]> {
 				: or(ilike(note.title, likePattern(term)), ilike(note.body, likePattern(term)))
 		);
 
-	if (rows.length === 0) {
-		return [];
-	}
-
-	const links = await db
-		.select({ id: noteTag.noteId, name: tag.name })
-		.from(noteTag)
-		.innerJoin(tag, eq(noteTag.tagId, tag.id))
-		.where(
-			inArray(
-				noteTag.noteId,
-				rows.map((row) => row.id)
-			)
-		)
-		.orderBy(asc(tag.name));
-
-	const tagsByNote = groupTagNames(links);
+	const tagsByNote = await tagsByNoteId(rows.map((row) => row.id));
 
 	return sortNotes(rows).map((row) => ({
 		...row,
@@ -55,14 +55,9 @@ export async function getNote(id: string): Promise<NoteListItem | null> {
 		return null;
 	}
 
-	const links = await db
-		.select({ id: noteTag.noteId, name: tag.name })
-		.from(noteTag)
-		.innerJoin(tag, eq(noteTag.tagId, tag.id))
-		.where(eq(noteTag.noteId, id))
-		.orderBy(asc(tag.name));
+	const tagsByNote = await tagsByNoteId([id]);
 
-	return { ...row, tags: links.map((link) => link.name), snippet: noteSnippet(row.body) };
+	return { ...row, tags: tagsByNote.get(id) ?? [], snippet: noteSnippet(row.body) };
 }
 
 export async function createNote(folderId: string | null = null): Promise<string> {

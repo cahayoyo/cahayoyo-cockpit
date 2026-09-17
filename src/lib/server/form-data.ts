@@ -7,10 +7,10 @@ export function text(formData: FormData, key: string): string {
 	return typeof value === 'string' ? value : '';
 }
 
-/** Field that may be absent ('' = none) but must be a UUID when present. */
+/** Optional UUID field: a missing, empty, or malformed value degrades to none. */
 export function optionalId(formData: FormData, key: string): string | null {
-	const value = text(formData, key);
-	return value === '' ? null : value;
+	const parsed = idSchema.safeParse(text(formData, key));
+	return parsed.success ? parsed.data : null;
 }
 
 /** UUID field that must be present; null when missing or malformed. */

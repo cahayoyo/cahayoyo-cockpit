@@ -126,8 +126,12 @@
 			}
 			// Refresh the list row (title, snippet, order) even for a note we just left.
 			if (!keepalive) void invalidateAll();
-		} else if (id === loadedId) {
-			saveState = reduceSaveState(saveState, { type: 'save-failure' });
+		} else {
+			// A late failure for a note we already switched away from cannot restore
+			// its dirty state, but the user must still know the edit did not persist.
+			if (id === loadedId) {
+				saveState = reduceSaveState(saveState, { type: 'save-failure' });
+			}
 			toast.error(outcome.message);
 		}
 	}
@@ -153,7 +157,12 @@
 
 		if (note.folderId !== lastServerFolderId) {
 			lastServerFolderId = note.folderId;
-			folderId = note.folderId;
+			// Adopt the server's folder only when nothing local is pending: a folder
+			// deleted elsewhere unfiles the note, but it must not overwrite a folder
+			// the user just picked and has not saved yet.
+			if (saveState.status === 'clean' || saveState.status === 'saved') {
+				folderId = note.folderId;
+			}
 		}
 	});
 
@@ -165,8 +174,9 @@
 	$effect(() => {
 		if (focusTitleAt === 0) return;
 		queueMicrotask(() => {
-			titleEl?.focus();
-			titleEl?.select();
+			if (!titleEl) return;
+			titleEl.focus();
+			titleEl.select();
 			onFocusHandled();
 		});
 	});
@@ -273,6 +283,9 @@
 			return;
 		}
 
+		// The upload outlives a note switch; the reference must land in the note the
+		// user pasted into, never in whatever note happens to be open when it resolves.
+		const targetId = loadedId;
 		const outcome = await submitAction('?/uploadMedia', { file }, { invalidate: false });
 		if (!outcome.ok) {
 			toast.error(outcome.message);
@@ -282,6 +295,11 @@
 		const mediaId = outcome.data.mediaId;
 		if (typeof mediaId !== 'string') {
 			toast.error('The image could not be uploaded.');
+			return;
+		}
+
+		if (targetId === null || targetId !== loadedId) {
+			toast.error('The note changed while the image uploaded; it is in the media library now.');
 			return;
 		}
 
@@ -367,7 +385,12 @@
 			Saved {formatTime(saveState.savedAt)}
 		</span>
 	{/if}
-	<Button size="sm" class="shrink-0" disabled={saveDisabled} onclick={() => void flush()}>
+	<Button
+		size="sm"
+		class="shrink-0 max-lg:h-11"
+		disabled={saveDisabled}
+		onclick={() => void flush()}
+	>
 		Save
 	</Button>
 	<Button
@@ -421,6 +444,7 @@
 			list="note-tags"
 			placeholder="Tags — qa, docs"
 			aria-label="Tags"
+			class="max-lg:h-11"
 			oninput={markEdit}
 			onblur={() => void flush()}
 		/>
