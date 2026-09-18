@@ -116,23 +116,31 @@
 				{#each zone.items as task (task.id)}
 					{@const progress = progressOf(task.id)}
 					{@const overdue = task.dueDate !== null && task.dueDate < today && task.status !== 'done'}
+					<!-- The card itself is the drag surface and the open affordance: a
+					     nested <button>/<input> would make svelte-dnd-action skip the
+					     press (its nested-element guard), so the title is plain text
+					     and the kebab stops its own events from reaching the card. -->
 					<div
-						class="relative rounded-lg border bg-card p-2.5 shadow-xs transition-colors hover:border-ring/60"
+						class="relative cursor-pointer rounded-lg border bg-card p-2.5 shadow-xs transition-colors hover:border-ring/60"
+						role="button"
+						tabindex="0"
+						onclick={() => onopen(task)}
+						onkeydown={(event) => event.key === 'Enter' && onopen(task)}
 					>
 						<div class="flex items-start justify-between gap-1">
-							<button
-								type="button"
-								class="text-left text-sm font-medium after:absolute after:inset-0"
-								onclick={() => onopen(task)}
-							>
-								{task.title || 'Untitled'}
-							</button>
+							<p class="text-sm font-medium">{task.title || 'Untitled'}</p>
 
-							<TaskMenu
-								{task}
-								onmove={(item, status) => void setStatus(item.id, status)}
-								{ondelete}
-							/>
+							<div
+								role="presentation"
+								onclick={(event) => event.stopPropagation()}
+								onkeydown={(event) => event.stopPropagation()}
+							>
+								<TaskMenu
+									{task}
+									onmove={(item, status) => void setStatus(item.id, status)}
+									{ondelete}
+								/>
+							</div>
 						</div>
 
 						<div class="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
