@@ -1,1 +1,2 @@
 Smoke test artifact for #21 — fe-senior-agent flow. Safe to delete, never merged.
+Review fix loop exercised: second line added after architect feedback.
