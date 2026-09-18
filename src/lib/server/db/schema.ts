@@ -104,8 +104,8 @@ export const taskStatus = pgEnum('task_status', [
 	'backlog',
 	'in_progress',
 	'review',
-	'blocked',
 	'waiting_for_acceptance',
+	'waiting_for_deployment',
 	'done'
 ]);
 
