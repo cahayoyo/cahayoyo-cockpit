@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { projectNameSchema, taskFormSchema } from './schemas';
+import { projectNameSchema, taskFormSchema } from './tasks-schemas';
 
 const PROJECT_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
 

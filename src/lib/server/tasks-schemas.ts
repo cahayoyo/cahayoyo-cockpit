@@ -1,11 +1,13 @@
 import { z } from 'zod';
-import { taskPriority, taskStatus } from '$lib/server/db/schema';
 import { parseTags } from '$lib/tags';
+import { taskPriority, taskStatus } from './db/schema';
 
-// The status is deliberately absent from the save form: it only changes through
-// `setTaskStatus` (the single writer of `completed_at`); new tasks start in
-// Backlog. The enum values are consumed from the schema, never re-listed.
-// Server-facing module: imports the DB schema, so never import it from client code.
+// Server-only: this module sits under `$lib/server/` (SvelteKit enforces it),
+// because it consumes the DB schema enum values — client code can only import
+// its types (`import type`). The status is deliberately absent from the save
+// form: it only changes through `setTaskStatus` (the single writer of
+// `completed_at`); new tasks start in Backlog. The enum values are consumed
+// from the schema, never re-listed.
 export const taskFormSchema = z.object({
 	title: z.string().trim().min(1, 'Title is required.').max(200, 'Title is too long.'),
 	description: z.string(),

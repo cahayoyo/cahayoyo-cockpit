@@ -6,7 +6,6 @@ import {
 	sortTasks,
 	type TaskFilters
 } from '$lib/tasks/filters';
-import type { TaskFormInput, TaskStatus } from '$lib/tasks/schemas';
 import { canAssignParent, type ParentCandidate } from '$lib/tasks/subtasks';
 import { todayIso } from '$lib/tasks/today';
 import { groupTagNames } from '$lib/tags';
@@ -14,6 +13,7 @@ import type { Transaction } from './db';
 import { db } from './db';
 import { project, task, taskPriority, taskStatus, taskTag, tag } from './db/schema';
 import { ensureTagIds } from './tags';
+import type { TaskFormInput, TaskStatus } from './tasks-schemas';
 
 // Fixed id seeded by migration 0001: the Inbox always exists and cannot be deleted.
 export const INBOX_PROJECT_ID = '00000000-0000-0000-0000-000000000001';
@@ -211,14 +211,22 @@ export async function setTaskStatus(id: string, status: TaskStatus): Promise<boo
 	return true;
 }
 
-export async function moveTaskProject(id: string, projectId: string): Promise<boolean> {
+export async function moveTaskProject(id: string, projectId: string): Promise<WriteResult> {
+	if (!(await projectExists(projectId))) {
+		return { ok: false, error: 'That project no longer exists.' };
+	}
+
 	const [updated] = await db
 		.update(task)
 		.set({ projectId })
 		.where(eq(task.id, id))
 		.returning({ id: task.id });
 
-	return updated !== undefined;
+	if (!updated) {
+		return { ok: false, error: 'This task no longer exists.' };
+	}
+
+	return { ok: true };
 }
 
 export async function deleteTask(id: string): Promise<void> {

@@ -130,6 +130,11 @@ describe('filterTasks', () => {
 		expect(filtered({ due: 'today' })).toEqual(['t2']);
 	});
 
+	test('today_or_overdue matches overdue and today, never later dates', () => {
+		expect(filtered({ due: 'today_or_overdue' })).toEqual(['t1', 't2']);
+		expect(filtered({ due: 'today_or_overdue', status: 'all' })).toEqual(['t1', 't2', 't5']);
+	});
+
 	test('next7 matches today through today+7', () => {
 		expect(filtered({ due: 'next7' })).toEqual(['t2', 't3']);
 	});
@@ -173,7 +178,7 @@ describe('sortTasks', () => {
 
 describe('filter keys', () => {
 	test('the due and sort key lists match the URL contract', () => {
-		expect(DUE_KEYS).toEqual(['any', 'overdue', 'today', 'next7', 'none']);
+		expect(DUE_KEYS).toEqual(['any', 'overdue', 'today', 'today_or_overdue', 'next7', 'none']);
 		expect(SORT_KEYS).toEqual(['due', 'priority', 'newest']);
 	});
 });
