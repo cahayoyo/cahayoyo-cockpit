@@ -1,4 +1,5 @@
 import Bookmark from '@lucide/svelte/icons/bookmark';
+import CalendarCheck from '@lucide/svelte/icons/calendar-check';
 import Lock from '@lucide/svelte/icons/lock';
 import Mail from '@lucide/svelte/icons/mail';
 import NotebookPen from '@lucide/svelte/icons/notebook-pen';
@@ -8,6 +9,7 @@ import Wrench from '@lucide/svelte/icons/wrench';
 
 export const NAV_ITEMS = [
 	{ href: '/', label: 'Cockpit', icon: Plane },
+	{ href: '/today', label: 'Today', icon: CalendarCheck },
 	{ href: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
 	{ href: '/notes', label: 'Notes', icon: NotebookPen },
 	{ href: '/tasks', label: 'Tasks', icon: SquareCheckBig },
