@@ -1,15 +1,16 @@
 import { z } from 'zod';
+import { dbIdSchema } from '$lib/ids';
 import { DUE_KEYS, SORT_KEYS, type TaskFilters } from './filters';
 
 export const taskSearchSchema = z.object({
-	project: z.uuid().catch(''),
+	project: dbIdSchema.catch(''),
 	status: z.string().trim().toLowerCase().catch('active'),
 	priority: z.string().trim().toLowerCase().catch('all'),
 	tag: z.string().trim().toLowerCase().catch(''),
 	due: z.enum(DUE_KEYS).catch('any'),
 	q: z.string().trim().catch(''),
 	sort: z.enum(SORT_KEYS).catch('due'),
-	task: z.uuid().catch('')
+	task: dbIdSchema.catch('')
 });
 
 export type TaskSearch = TaskFilters & { taskId: string | null };
