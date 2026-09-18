@@ -11,6 +11,22 @@ export type NoteListItem = typeof note.$inferSelect & { tags: string[]; snippet:
 
 const UNTITLED = 'Untitled';
 
+// Tag names per note, ordered alphabetically, for the given note ids.
+async function tagsByNoteId(ids: string[]): Promise<Map<string, string[]>> {
+	if (ids.length === 0) {
+		return new Map();
+	}
+
+	const links = await db
+		.select({ id: noteTag.noteId, name: tag.name })
+		.from(noteTag)
+		.innerJoin(tag, eq(noteTag.tagId, tag.id))
+		.where(inArray(noteTag.noteId, ids))
+		.orderBy(asc(tag.name));
+
+	return groupTagNames(links);
+}
+
 // A non-empty query is the global search: it matches titles and bodies
 // case-insensitively and ignores the folder scope.
 export async function listNotes(query = ''): Promise<NoteListItem[]> {
@@ -24,29 +40,24 @@ export async function listNotes(query = ''): Promise<NoteListItem[]> {
 				: or(ilike(note.title, likePattern(term)), ilike(note.body, likePattern(term)))
 		);
 
-	if (rows.length === 0) {
-		return [];
-	}
-
-	const links = await db
-		.select({ id: noteTag.noteId, name: tag.name })
-		.from(noteTag)
-		.innerJoin(tag, eq(noteTag.tagId, tag.id))
-		.where(
-			inArray(
-				noteTag.noteId,
-				rows.map((row) => row.id)
-			)
-		)
-		.orderBy(asc(tag.name));
-
-	const tagsByNote = groupTagNames(links);
+	const tagsByNote = await tagsByNoteId(rows.map((row) => row.id));
 
 	return sortNotes(rows).map((row) => ({
 		...row,
 		tags: tagsByNote.get(row.id) ?? [],
 		snippet: noteSnippet(row.body)
 	}));
+}
+
+export async function getNote(id: string): Promise<NoteListItem | null> {
+	const [row] = await db.select().from(note).where(eq(note.id, id));
+	if (!row) {
+		return null;
+	}
+
+	const tagsByNote = await tagsByNoteId([id]);
+
+	return { ...row, tags: tagsByNote.get(id) ?? [], snippet: noteSnippet(row.body) };
 }
 
 export async function createNote(folderId: string | null = null): Promise<string> {
@@ -67,21 +78,21 @@ async function attachTags(tx: Transaction, noteId: string, names: string[]): Pro
 	await tx.insert(noteTag).values(tagIds.map((tagId) => ({ noteId, tagId })));
 }
 
-export async function updateNote(id: string, input: NoteFormInput): Promise<boolean> {
+export async function updateNote(id: string, input: NoteFormInput): Promise<Date | null> {
 	return db.transaction(async (tx) => {
 		const updated = await tx
 			.update(note)
 			.set({ title: input.title, body: input.body, folderId: input.folderId })
 			.where(eq(note.id, id))
-			.returning({ id: note.id });
+			.returning({ id: note.id, updatedAt: note.updatedAt });
 
 		if (updated.length === 0) {
-			return false;
+			return null;
 		}
 
 		await tx.delete(noteTag).where(eq(noteTag.noteId, id));
 		await attachTags(tx, id, input.tags);
-		return true;
+		return updated[0].updatedAt;
 	});
 }
 

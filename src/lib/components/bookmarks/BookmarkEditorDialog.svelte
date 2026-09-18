@@ -5,7 +5,7 @@
 	import Star from '@lucide/svelte/icons/star';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
-	import { failureMessage } from './actions.js';
+	import { failureMessage } from '$lib/forms.js';
 	import type { FolderRow } from '$lib/folders/tree.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
@@ -13,7 +13,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { cn } from '$lib/utils.js';
-	import FolderPicker from './FolderPicker.svelte';
+	import FolderPicker from '$lib/components/FolderPicker.svelte';
 	import MediaPickerDialog from './MediaPickerDialog.svelte';
 	import type { BookmarkItem, MediaItem } from './types.js';
 
@@ -163,6 +163,7 @@
 					bind:value={draft.folderId}
 					{folders}
 					label="Folder"
+					rootLabel="Bookmarks bar"
 					{oncreate}
 					class="w-full"
 				/>

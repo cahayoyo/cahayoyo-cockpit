@@ -111,6 +111,11 @@
 	--color-sidebar-ring: var(--sidebar-ring);
 }
 
+@utility app-pane {
+	/* Master–detail pages fill the viewport that remains below the shell header. */
+	height: calc(100svh - 12rem);
+}
+
 @layer base {
 	* {
 		@apply border-border outline-ring/50;

@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { filterBookmarks } from '$lib/bookmarks/filters';
 import { parseBookmarkSearch, parseBookmarkView } from '$lib/bookmarks/params';
 import { bookmarkFormSchema } from '$lib/bookmarks/schemas';
-import { folderFormSchema } from '$lib/folders/schemas';
 import { ROOT_FOLDER_ID } from '$lib/folders/tree';
 import {
 	createBookmark,
@@ -12,30 +11,15 @@ import {
 	setBookmarkFavorite,
 	updateBookmark
 } from '$lib/server/bookmarks';
-import { createFolder, deleteFolder, listFolders, renameFolder } from '$lib/server/folders';
-import { deleteMedia, getMediaFile, listMedia, saveMedia } from '$lib/server/media';
+import { folderActions } from '$lib/server/folder-actions';
+import { optionalId, requiredId, text } from '$lib/server/form-data';
+import { listFolders } from '$lib/server/folders';
+import { deleteMedia, getMediaFile, listMedia } from '$lib/server/media';
 import { listTags } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
 const idSchema = z.uuid();
 const favoriteSchema = z.enum(['true', 'false']);
-
-function text(formData: FormData, key: string): string {
-	const value = formData.get(key);
-	return typeof value === 'string' ? value : '';
-}
-
-/** Field that may be absent ('' = none) but must be a UUID when present. */
-function optionalId(formData: FormData, key: string): string | null {
-	const value = text(formData, key);
-	return value === '' ? null : value;
-}
-
-/** UUID field that must be present; null when missing or malformed. */
-function requiredId(formData: FormData, key = 'id'): string | null {
-	const parsed = idSchema.safeParse(text(formData, key));
-	return parsed.success ? parsed.data : null;
-}
 
 export const load: PageServerLoad = async ({ url }) => {
 	const filters = parseBookmarkSearch(url.searchParams);
@@ -62,6 +46,8 @@ export const load: PageServerLoad = async ({ url }) => {
 };
 
 export const actions: Actions = {
+	...folderActions,
+
 	saveBookmark: async ({ request }) => {
 		const formData = await request.formData();
 		const parsed = bookmarkFormSchema.safeParse({
@@ -126,62 +112,6 @@ export const actions: Actions = {
 
 		await setBookmarkFavorite(id, favorite.data === 'true');
 		return { toggled: true };
-	},
-
-	createFolder: async ({ request }) => {
-		const formData = await request.formData();
-		const parsed = folderFormSchema.safeParse({
-			name: text(formData, 'name'),
-			parentId: optionalId(formData, 'parentId')
-		});
-
-		if (!parsed.success) {
-			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid folder.' });
-		}
-
-		return { folderId: await createFolder(parsed.data) };
-	},
-
-	renameFolder: async ({ request }) => {
-		const formData = await request.formData();
-		const parsed = folderFormSchema
-			.pick({ name: true })
-			.safeParse({ name: text(formData, 'name') });
-		if (!parsed.success) {
-			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid folder.' });
-		}
-
-		const id = requiredId(formData);
-		if (!id) {
-			return fail(400, { message: 'Invalid folder.' });
-		}
-
-		await renameFolder(id, parsed.data.name);
-		return { renamed: true };
-	},
-
-	deleteFolder: async ({ request }) => {
-		const id = requiredId(await request.formData());
-		if (!id) {
-			return fail(400, { message: 'Invalid folder.' });
-		}
-
-		await deleteFolder(id);
-		return { deleted: true };
-	},
-
-	uploadMedia: async ({ request }) => {
-		const file = (await request.formData()).get('file');
-		if (!(file instanceof File)) {
-			return fail(400, { message: 'Choose an image to upload.' });
-		}
-
-		const saved = await saveMedia(file);
-		if (!saved.ok) {
-			return fail(400, { message: saved.error });
-		}
-
-		return { mediaId: saved.media.id };
 	},
 
 	deleteMedia: async ({ request }) => {

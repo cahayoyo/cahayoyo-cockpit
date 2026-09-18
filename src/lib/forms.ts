@@ -10,24 +10,38 @@ export function failureMessage(data: unknown): string {
 }
 
 // Most mutations run through <form use:enhance>; this calls a form action directly
-// for interactions that only exist with JS (inline inputs inside menus).
+// for interactions that only exist with JS (inline inputs, autosave, uploads).
+// File/Blob values are supported for multipart boundaries (e.g. image uploads);
+// `keepalive` lets a navigation flush finish after the page unloads.
 export async function submitAction(
 	action: string,
-	values: Record<string, string>
+	values: Record<string, string | Blob>,
+	options: { invalidate?: boolean; keepalive?: boolean } = {}
 ): Promise<ActionOutcome> {
 	const body = new FormData();
 	for (const [key, value] of Object.entries(values)) {
 		body.append(key, value);
 	}
 
-	const response = await fetch(action, {
-		method: 'POST',
-		body,
-		headers: { accept: 'application/json' }
-	});
-	const result = deserialize(await response.text());
+	// A blocked request (offline, proxy error, aborted fetch) or a non-SvelteKit
+	// body (5xx HTML page) must become a failure outcome: callers drive save-state
+	// machines and toasts from this result, never from a thrown exception.
+	let result: ReturnType<typeof deserialize>;
+	try {
+		const response = await fetch(action, {
+			method: 'POST',
+			body,
+			headers: { accept: 'application/json' },
+			keepalive: options.keepalive ?? false
+		});
+		result = deserialize(await response.text());
+	} catch {
+		return { ok: false, message: 'Something went wrong.' };
+	}
 
-	await invalidateAll();
+	if (options.invalidate !== false) {
+		await invalidateAll();
+	}
 
 	if (result.type === 'success') {
 		return { ok: true, data: result.data ?? {} };
