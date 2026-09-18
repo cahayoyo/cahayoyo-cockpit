@@ -1,0 +1,1 @@
+Smoke test artifact for #21 — be-senior-agent flow. Safe to delete, never merged.
