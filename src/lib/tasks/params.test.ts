@@ -31,6 +31,12 @@ describe('parseTaskSearch', () => {
 		expect(parse('project=').projectId).toBeNull();
 	});
 
+	test('keeps the seeded Inbox id (not an RFC 9562 UUID)', () => {
+		const inboxId = '00000000-0000-0000-0000-000000000001';
+		expect(parse(`project=${inboxId}`).projectId).toBe(inboxId);
+		expect(parse(`task=${inboxId}`).taskId).toBe(inboxId);
+	});
+
 	test('trims the query without changing its case', () => {
 		expect(parse('q=%20Drizzle%20').q).toBe('Drizzle');
 	});

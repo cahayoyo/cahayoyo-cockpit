@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-const idSchema = z.uuid();
+// `z.guid()` (format-only), not `z.uuid()`: the Inbox id seeded by migration
+// 0001 (`00000000-0000-0000-0000-000000000001`) is a valid database uuid but
+// fails Zod 4's RFC 9562 version/variant check.
+const idSchema = z.guid();
 
 export function text(formData: FormData, key: string): string {
 	const value = formData.get(key);

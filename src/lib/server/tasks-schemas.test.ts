@@ -35,6 +35,13 @@ describe('taskFormSchema', () => {
 		expect(taskFormSchema.safeParse({ ...valid, parentId: PROJECT_ID }).success).toBe(true);
 		expect(taskFormSchema.safeParse({ ...valid, parentId: '' }).success).toBe(false);
 	});
+
+	test('accepts the seeded Inbox id (not an RFC 9562 UUID)', () => {
+		// Migration 0001 seeds this id as the Inbox project.
+		const inboxId = '00000000-0000-0000-0000-000000000001';
+		expect(taskFormSchema.safeParse({ ...valid, projectId: inboxId }).success).toBe(true);
+		expect(taskFormSchema.safeParse({ ...valid, parentId: inboxId }).success).toBe(true);
+	});
 });
 
 describe('projectNameSchema', () => {

@@ -1,15 +1,17 @@
 import { z } from 'zod';
 import { DUE_KEYS, SORT_KEYS, type TaskFilters } from './filters';
 
+// `z.guid()` (format-only), not `z.uuid()`: the seeded Inbox id
+// (`00000000-0000-0000-0000-000000000001`) fails Zod 4's RFC 9562 version check.
 export const taskSearchSchema = z.object({
-	project: z.uuid().catch(''),
+	project: z.guid().catch(''),
 	status: z.string().trim().toLowerCase().catch('active'),
 	priority: z.string().trim().toLowerCase().catch('all'),
 	tag: z.string().trim().toLowerCase().catch(''),
 	due: z.enum(DUE_KEYS).catch('any'),
 	q: z.string().trim().catch(''),
 	sort: z.enum(SORT_KEYS).catch('due'),
-	task: z.uuid().catch('')
+	task: z.guid().catch('')
 });
 
 export type TaskSearch = TaskFilters & { taskId: string | null };
