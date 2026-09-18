@@ -72,6 +72,10 @@
 	let confirmOpen = $state(false);
 	let deleteTarget = $state<TaskItem | null>(null);
 	let syncedKey = $state<string | null>(null);
+	// The task the dialog is showing, remembered so the delete confirm can tell
+	// "deleted the open task" (close the parent, strip ?task=) from "deleted a
+	// subtask" — after the confirm's `update()` the task prop is already null.
+	let openTaskId = $state<string | null>(null);
 
 	const doneCount = $derived(subtasks.filter((subtask) => subtask.status === 'done').length);
 	const canSave = $derived(draft.title.trim().length > 0 && !saving);
@@ -83,6 +87,7 @@
 		if (key === syncedKey) return;
 		syncedKey = key;
 		if (key === null) return;
+		openTaskId = key === 'new' ? null : key;
 
 		draft = task
 			? {
@@ -161,7 +166,7 @@
 	}
 
 	function afterDelete(): void {
-		if (deleteTarget?.id === task?.id) onclose();
+		if (deleteTarget && deleteTarget.id === openTaskId) onclose();
 		deleteTarget = null;
 	}
 </script>
