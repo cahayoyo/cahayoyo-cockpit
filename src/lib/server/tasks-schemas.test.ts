@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { INBOX_PROJECT_ID } from '$lib/ids';
 import { projectNameSchema, taskFormSchema } from './tasks-schemas';
 
 const PROJECT_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
@@ -34,6 +35,12 @@ describe('taskFormSchema', () => {
 	test('accepts a subtask parent and rejects a malformed one', () => {
 		expect(taskFormSchema.safeParse({ ...valid, parentId: PROJECT_ID }).success).toBe(true);
 		expect(taskFormSchema.safeParse({ ...valid, parentId: '' }).success).toBe(false);
+	});
+
+	test('accepts the seeded Inbox id (not an RFC 9562 UUID)', () => {
+		const parsed = taskFormSchema.safeParse({ ...valid, projectId: INBOX_PROJECT_ID });
+		expect(parsed.success).toBe(true);
+		expect(taskFormSchema.safeParse({ ...valid, parentId: INBOX_PROJECT_ID }).success).toBe(true);
 	});
 });
 

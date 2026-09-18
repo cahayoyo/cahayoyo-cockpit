@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { dbIdSchema } from '$lib/ids';
 import { parseTags } from '$lib/tags';
 import { taskPriority, taskStatus } from './db/schema';
 
@@ -11,12 +12,12 @@ import { taskPriority, taskStatus } from './db/schema';
 export const taskFormSchema = z.object({
 	title: z.string().trim().min(1, 'Title is required.').max(200, 'Title is too long.'),
 	description: z.string(),
-	projectId: z.uuid(),
+	projectId: dbIdSchema,
 	priority: z.enum(taskPriority.enumValues),
 	dueDate: z
 		.union([z.literal(''), z.iso.date()])
 		.transform((value) => (value === '' ? null : value)),
-	parentId: z.uuid().nullable(),
+	parentId: dbIdSchema.nullable(),
 	tags: z.string().transform(parseTags)
 });
 

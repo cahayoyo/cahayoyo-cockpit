@@ -1,6 +1,4 @@
-import { z } from 'zod';
-
-const idSchema = z.uuid();
+import { dbIdSchema } from '$lib/ids';
 
 export function text(formData: FormData, key: string): string {
 	const value = formData.get(key);
@@ -9,12 +7,12 @@ export function text(formData: FormData, key: string): string {
 
 /** Optional UUID field: a missing, empty, or malformed value degrades to none. */
 export function optionalId(formData: FormData, key: string): string | null {
-	const parsed = idSchema.safeParse(text(formData, key));
+	const parsed = dbIdSchema.safeParse(text(formData, key));
 	return parsed.success ? parsed.data : null;
 }
 
 /** UUID field that must be present; null when missing or malformed. */
 export function requiredId(formData: FormData, key = 'id'): string | null {
-	const parsed = idSchema.safeParse(text(formData, key));
+	const parsed = dbIdSchema.safeParse(text(formData, key));
 	return parsed.success ? parsed.data : null;
 }
