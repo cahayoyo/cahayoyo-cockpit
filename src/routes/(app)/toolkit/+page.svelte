@@ -31,7 +31,7 @@
 		{#each TOOLS as tool (tool.value)}
 			<Tabs.Trigger
 				value={tool.value}
-				class="data-[state=active]:border-primary data-[state=active]:text-foreground h-9 flex-none gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:bg-transparent"
+				class="data-[state=active]:border-primary data-[state=active]:text-foreground h-9 max-lg:h-11 flex-none gap-2 rounded-none border-b-2 border-transparent px-3 data-[state=active]:bg-transparent"
 			>
 				<tool.icon class="size-4" />
 				{tool.label}
