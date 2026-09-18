@@ -21,6 +21,19 @@ export type TaskFilters = {
 	sort: SortKey;
 };
 
+// Every filter relaxed: the page loads fetch the full list once and derive the
+// filtered views with the pure helpers below (subtask progress, parent labels
+// and the board need tasks the active filters exclude).
+export const ALL_TASKS: TaskFilters = {
+	projectId: null,
+	status: 'all',
+	priority: 'all',
+	tag: null,
+	due: 'any',
+	q: '',
+	sort: 'due'
+};
+
 export type FilterableTask = {
 	title: string;
 	description: string | null;

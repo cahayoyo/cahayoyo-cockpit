@@ -6,13 +6,10 @@
 	// Moves are optimistic: the zone updates locally, the server action runs on
 	// finalize, and every server refresh re-syncs the zones from the task list —
 	// which is also the rollback when a move fails.
-	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import { untrack } from 'svelte';
 	import { dndzone, type DndEvent } from 'svelte-dnd-action';
 	import { toast } from 'svelte-sonner';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { submitAction } from '$lib/forms.js';
 	import {
 		PRIORITY_META,
@@ -21,6 +18,7 @@
 		type TaskStatus
 	} from '$lib/tasks/presentation.js';
 	import { cn } from '$lib/utils.js';
+	import TaskMenu from './TaskMenu.svelte';
 	import type { TaskItem, TaskProgress } from './types.js';
 
 	type Zone = { status: TaskStatus; items: TaskItem[] };
@@ -130,42 +128,11 @@
 								{task.title || 'Untitled'}
 							</button>
 
-							<div class="relative z-10">
-								<DropdownMenu.Root>
-									<DropdownMenu.Trigger>
-										{#snippet child({ props })}
-											<Button
-												variant="ghost"
-												size="icon-sm"
-												class="shrink-0 max-lg:size-11"
-												aria-label="Task actions"
-												{...props}
-											>
-												<EllipsisVertical class="size-4" />
-											</Button>
-										{/snippet}
-									</DropdownMenu.Trigger>
-									<DropdownMenu.Content align="end">
-										<DropdownMenu.Sub>
-											<DropdownMenu.SubTrigger>Move to</DropdownMenu.SubTrigger>
-											<DropdownMenu.SubContent>
-												{#each STATUS_ORDER as option (option)}
-													<DropdownMenu.Item
-														disabled={option === task.status}
-														onSelect={() => void setStatus(task.id, option)}
-													>
-														{STATUS_META[option].label}
-													</DropdownMenu.Item>
-												{/each}
-											</DropdownMenu.SubContent>
-										</DropdownMenu.Sub>
-										<DropdownMenu.Separator />
-										<DropdownMenu.Item variant="destructive" onSelect={() => ondelete(task)}>
-											Delete
-										</DropdownMenu.Item>
-									</DropdownMenu.Content>
-								</DropdownMenu.Root>
-							</div>
+							<TaskMenu
+								{task}
+								onmove={(item, status) => void setStatus(item.id, status)}
+								{ondelete}
+							/>
 						</div>
 
 						<div class="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">

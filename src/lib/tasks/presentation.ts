@@ -57,3 +57,14 @@ export const PRIORITY_META: Record<TaskPriority, { label: string; badge: string 
 };
 
 export const PRIORITY_ORDER: readonly TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
+
+export function projectName(projects: readonly { id: string; name: string }[], id: string): string {
+	return projects.find((project) => project.id === id)?.name ?? '';
+}
+
+/** Shared ConfirmDialog copy: a parent deletes its subtasks with it. */
+export function deleteTaskDescription(task: { title: string; parentId: string | null }): string {
+	return `"${task.title || 'Untitled'}" will be deleted${
+		task.parentId === null ? ', together with its subtasks' : ''
+	}.`;
+}

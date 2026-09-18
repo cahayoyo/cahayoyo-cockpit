@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import type { TaskFilters } from '$lib/tasks/filters';
+import { ALL_TASKS } from '$lib/tasks/filters';
 import { todayIso } from '$lib/tasks/today';
 import { taskActions } from '$lib/server/task-actions';
 import { text } from '$lib/server/form-data';
@@ -11,16 +11,6 @@ import type { Actions, PageServerLoad } from './$types.js';
 
 // The page derives the Today scope from one unfiltered task list: a subtask's
 // parent is usually not due today, but the row still needs its label.
-const ALL_TASKS: TaskFilters = {
-	projectId: null,
-	status: 'all',
-	priority: 'all',
-	tag: null,
-	due: 'any',
-	q: '',
-	sort: 'due'
-};
-
 export const load: PageServerLoad = async () => {
 	const [projects, tasks, tags] = await Promise.all([
 		listProjects(),

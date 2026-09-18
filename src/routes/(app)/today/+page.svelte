@@ -10,12 +10,14 @@
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import TaskDetailDialog from '$lib/components/tasks/TaskDetailDialog.svelte';
 	import TaskRow from '$lib/components/tasks/TaskRow.svelte';
-	import type { TaskItem, TaskProgress } from '$lib/components/tasks/types.js';
+	import type { TaskItem } from '$lib/components/tasks/types.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { failureMessage, submitAction } from '$lib/forms.js';
 	import { filterTasks, type TaskFilters } from '$lib/tasks/filters.js';
+	import { deleteTaskDescription, projectName } from '$lib/tasks/presentation.js';
+	import { groupByParent, subtaskProgress } from '$lib/tasks/subtasks.js';
 	import type { PageProps } from './$types.js';
 
 	let { data }: PageProps = $props();
@@ -42,23 +44,8 @@
 	const items = $derived(filterTasks(data.tasks, TODAY_FILTERS, data.today));
 	const selected = $derived(data.tasks.find((task) => task.id === selectedId) ?? null);
 
-	const childrenOf = $derived.by(() => {
-		const map: Record<string, TaskItem[]> = {};
-		for (const task of data.tasks) {
-			if (task.parentId === null) continue;
-			(map[task.parentId] ??= []).push(task);
-		}
-		return map;
-	});
-	const progressOf = (id: string): TaskProgress => {
-		const children = childrenOf[id] ?? [];
-		return {
-			done: children.filter((task) => task.status === 'done').length,
-			total: children.length
-		};
-	};
-	const projectName = (id: string): string =>
-		data.projects.find((project) => project.id === id)?.name ?? '';
+	const childrenOf = $derived(groupByParent(data.tasks));
+	const progressOf = (id: string) => subtaskProgress(childrenOf.get(id) ?? []);
 	const parentTitle = (task: TaskItem): string | undefined =>
 		task.parentId === null
 			? undefined
@@ -132,7 +119,7 @@
 				{task}
 				today={data.today}
 				progress={progressOf(task.id)}
-				projectName={projectName(task.projectId)}
+				projectName={projectName(data.projects, task.projectId)}
 				parentTitle={parentTitle(task)}
 				onopen={(opened) => (selectedId = opened.id)}
 				onstatuschange={changeStatus}
@@ -145,7 +132,7 @@
 <TaskDetailDialog
 	open={selected !== null}
 	task={selected}
-	subtasks={selected ? (childrenOf[selected.id] ?? []) : []}
+	subtasks={selected ? (childrenOf.get(selected.id) ?? []) : []}
 	projects={data.projects}
 	tags={data.tags}
 	defaultProjectId={data.projects.find((project) => project.isInbox)?.id ?? ''}
@@ -155,11 +142,7 @@
 <ConfirmDialog
 	bind:open={confirmOpen}
 	title="Delete task"
-	description={confirming
-		? `"${confirming.title || 'Untitled'}" will be deleted${
-				confirming.parentId === null ? ', together with its subtasks' : ''
-			}.`
-		: ''}
+	description={confirming ? deleteTaskDescription(confirming) : ''}
 	confirmLabel="Delete task"
 	action="?/deleteTask"
 	fields={confirming ? { id: confirming.id } : {}}

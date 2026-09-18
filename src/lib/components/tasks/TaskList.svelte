@@ -1,5 +1,6 @@
 <script lang="ts">
 	// Task list container: one bordered card, one TaskRow per task.
+	import { projectName } from '$lib/tasks/presentation.js';
 	import TaskRow from './TaskRow.svelte';
 	import type { ProjectItem, TaskItem, TaskProgress } from './types.js';
 
@@ -22,10 +23,6 @@
 		onstatuschange: (task: TaskItem, status: string) => void;
 		ondelete: (task: TaskItem) => void;
 	} = $props();
-
-	function projectName(id: string): string {
-		return projects.find((project) => project.id === id)?.name ?? '';
-	}
 </script>
 
 <div
@@ -36,7 +33,7 @@
 			{task}
 			{today}
 			progress={progressOf(task.id)}
-			projectName={showProject ? projectName(task.projectId) : undefined}
+			projectName={showProject ? projectName(projects, task.projectId) : undefined}
 			{onopen}
 			{onstatuschange}
 			{ondelete}

@@ -33,6 +33,7 @@ export type TaskFilterPatch = {
 	projectId?: string | null;
 	status?: string;
 	priority?: string;
+	tag?: string | null;
 	due?: DueFilter;
 	sort?: SortKey;
 	q?: string;

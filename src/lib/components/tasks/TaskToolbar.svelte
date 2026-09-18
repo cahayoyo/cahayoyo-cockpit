@@ -153,6 +153,10 @@
 		</Button>
 	</div>
 
+	{#if projectId === null}
+		<p class="text-xs text-muted-foreground">Pick a project to open the board.</p>
+	{/if}
+
 	<Select.Root type="single" value={status} onValueChange={(value) => onpatch({ status: value })}>
 		<Select.Trigger aria-label="Filter by status">{statusLabel()}</Select.Trigger>
 		<Select.Content>

@@ -13,10 +13,12 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { failureMessage, submitAction } from '$lib/forms.js';
 	import {
+		deleteTaskDescription,
 		PRIORITY_META,
 		PRIORITY_ORDER,
 		STATUS_META,
@@ -203,24 +205,27 @@
 			<input type="hidden" name="priority" value={draft.priority} />
 			<input type="hidden" name="description" value={draft.description} />
 
-			<Input
-				bind:ref={titleInput}
-				name="title"
-				bind:value={draft.title}
-				placeholder="Task title"
-				aria-label="Task title"
-			/>
+			<div class="space-y-1">
+				<Label for="task-title">Title</Label>
+				<Input
+					id="task-title"
+					bind:ref={titleInput}
+					name="title"
+					bind:value={draft.title}
+					placeholder="Fix flaky login test"
+				/>
+			</div>
 
 			<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
 				<div class="space-y-1">
-					<span class="text-xs text-muted-foreground">Project</span>
+					<Label for="task-project">Project</Label>
 					<Select.Root
 						type="single"
 						value={draft.projectId}
 						disabled={task === null}
 						onValueChange={(value) => void changeProject(value)}
 					>
-						<Select.Trigger class="w-full" aria-label="Project">
+						<Select.Trigger id="task-project" class="w-full" aria-label="Project">
 							{projects.find((project) => project.id === draft.projectId)?.name ?? 'Project'}
 						</Select.Trigger>
 						<Select.Content>
@@ -233,13 +238,13 @@
 
 				{#if task}
 					<div class="space-y-1">
-						<span class="text-xs text-muted-foreground">Status</span>
+						<Label for="task-status">Status</Label>
 						<Select.Root
 							type="single"
 							value={task.status}
 							onValueChange={(value) => void changeStatus(value as TaskStatus)}
 						>
-							<Select.Trigger class="w-full" aria-label="Status">
+							<Select.Trigger id="task-status" class="w-full" aria-label="Status">
 								{STATUS_META[task.status].label}
 							</Select.Trigger>
 							<Select.Content>
@@ -254,13 +259,13 @@
 				{/if}
 
 				<div class="space-y-1">
-					<span class="text-xs text-muted-foreground">Priority</span>
+					<Label for="task-priority">Priority</Label>
 					<Select.Root
 						type="single"
 						value={draft.priority}
 						onValueChange={(value) => (draft.priority = value as TaskPriority)}
 					>
-						<Select.Trigger class="w-full" aria-label="Priority">
+						<Select.Trigger id="task-priority" class="w-full" aria-label="Priority">
 							{PRIORITY_META[draft.priority].label}
 						</Select.Trigger>
 						<Select.Content>
@@ -274,19 +279,19 @@
 				</div>
 
 				<div class="space-y-1">
-					<span class="text-xs text-muted-foreground">Due date</span>
-					<Input type="date" name="dueDate" bind:value={draft.dueDate} aria-label="Due date" />
+					<Label for="task-due">Due date</Label>
+					<Input id="task-due" type="date" name="dueDate" bind:value={draft.dueDate} />
 				</div>
 			</div>
 
 			<div class="space-y-1">
-				<span class="text-xs text-muted-foreground">Tags (comma separated)</span>
+				<Label for="task-tags">Tags (comma separated)</Label>
 				<Input
+					id="task-tags"
 					name="tags"
 					bind:value={draft.tagsText}
 					list="task-tags"
 					placeholder="qa, frontend"
-					aria-label="Tags"
 				/>
 				<datalist id="task-tags">
 					{#each tags as tag (tag)}
@@ -340,21 +345,22 @@
 					</div>
 					{#each subtasks as subtask (subtask.id)}
 						<div class="flex items-center gap-2 rounded-lg border px-2 py-1.5">
-							<input
-								type="checkbox"
-								class="size-4 accent-primary"
-								checked={subtask.status === 'done'}
-								onchange={(event) => void toggleSubtask(subtask, event.currentTarget.checked)}
-								aria-label="Toggle subtask"
-							/>
-							<span
-								class={cn(
-									'flex-1 truncate text-sm',
-									subtask.status === 'done' && 'text-muted-foreground line-through'
-								)}
-							>
-								{subtask.title || 'Untitled'}
-							</span>
+							<label class="flex min-w-0 flex-1 items-center gap-2 max-lg:min-h-11">
+								<input
+									type="checkbox"
+									class="size-4 accent-primary"
+									checked={subtask.status === 'done'}
+									onchange={(event) => void toggleSubtask(subtask, event.currentTarget.checked)}
+								/>
+								<span
+									class={cn(
+										'flex-1 truncate text-sm',
+										subtask.status === 'done' && 'text-muted-foreground line-through'
+									)}
+								>
+									{subtask.title || 'Untitled'}
+								</span>
+							</label>
 							<Button
 								variant="ghost"
 								size="icon-sm"
@@ -411,11 +417,7 @@
 		<ConfirmDialog
 			bind:open={confirmOpen}
 			title="Delete task"
-			description={deleteTarget
-				? `"${deleteTarget.title || 'Untitled'}" will be deleted${
-						deleteTarget.parentId === null ? ', together with its subtasks' : ''
-					}.`
-				: ''}
+			description={deleteTarget ? deleteTaskDescription(deleteTarget) : ''}
 			confirmLabel="Delete task"
 			action="?/deleteTask"
 			fields={{ id: deleteTarget?.id ?? '' }}

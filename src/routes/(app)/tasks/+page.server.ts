@@ -1,5 +1,5 @@
 import { fail } from '@sveltejs/kit';
-import type { TaskFilters } from '$lib/tasks/filters';
+import { ALL_TASKS } from '$lib/tasks/filters';
 import { parseTaskSearch, parseTaskView } from '$lib/tasks/params';
 import { todayIso } from '$lib/tasks/today';
 import { taskActions } from '$lib/server/task-actions';
@@ -19,16 +19,6 @@ import type { Actions, PageServerLoad } from './$types.js';
 // The page derives every view from one unfiltered task list: subtask progress,
 // parent labels and the board need tasks the active filters exclude. Filtering
 // and sorting reuse the same pure helpers the server layer uses.
-const ALL_TASKS: TaskFilters = {
-	projectId: null,
-	status: 'all',
-	priority: 'all',
-	tag: null,
-	due: 'any',
-	q: '',
-	sort: 'due'
-};
-
 export const load: PageServerLoad = async ({ url }) => {
 	const [projects, tasks, tags] = await Promise.all([
 		listProjects(),

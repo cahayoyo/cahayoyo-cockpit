@@ -100,7 +100,12 @@
 					<div class="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/50">
 						<span class="flex-1 truncate text-sm">{project.name}</span>
 						<span class="text-xs text-muted-foreground">{project.taskCount}</span>
-						<Button size="xs" variant="ghost" onclick={() => startRename(project)}>Rename</Button>
+						<Button
+							size="xs"
+							variant="ghost"
+							class="max-lg:h-11 max-lg:px-3"
+							onclick={() => startRename(project)}>Rename</Button
+						>
 						<Button
 							size="icon-sm"
 							variant="ghost"

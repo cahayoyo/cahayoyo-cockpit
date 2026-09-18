@@ -2,12 +2,10 @@
 	// One task row (list views): title, optional project/parent label, due date,
 	// subtask progress, tags, status + priority badges, kebab (Move to / Delete).
 	// The title button stretches over the row, like the bookmark list rows.
-	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import { PRIORITY_META, STATUS_META, STATUS_ORDER } from '$lib/tasks/presentation.js';
+	import { PRIORITY_META, STATUS_META } from '$lib/tasks/presentation.js';
 	import { cn } from '$lib/utils.js';
+	import TaskMenu from './TaskMenu.svelte';
 	import type { TaskItem, TaskProgress } from './types.js';
 
 	let {
@@ -65,47 +63,12 @@
 		</div>
 	</div>
 
-	<Badge variant="outline" class={cn('max-sm:hidden', STATUS_META[task.status].badge)}>
+	<Badge variant="outline" class={STATUS_META[task.status].badge}>
 		{STATUS_META[task.status].label}
 	</Badge>
 	<Badge variant="outline" class={PRIORITY_META[task.priority].badge}>
 		{PRIORITY_META[task.priority].label}
 	</Badge>
 
-	<div class="relative z-10">
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger>
-				{#snippet child({ props })}
-					<Button
-						variant="ghost"
-						size="icon-sm"
-						class="shrink-0 max-lg:size-11"
-						aria-label="Task actions"
-						{...props}
-					>
-						<EllipsisVertical class="size-4" />
-					</Button>
-				{/snippet}
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content align="end">
-				<DropdownMenu.Sub>
-					<DropdownMenu.SubTrigger>Move to</DropdownMenu.SubTrigger>
-					<DropdownMenu.SubContent>
-						{#each STATUS_ORDER as option (option)}
-							<DropdownMenu.Item
-								disabled={option === task.status}
-								onSelect={() => onstatuschange(task, option)}
-							>
-								{STATUS_META[option].label}
-							</DropdownMenu.Item>
-						{/each}
-					</DropdownMenu.SubContent>
-				</DropdownMenu.Sub>
-				<DropdownMenu.Separator />
-				<DropdownMenu.Item variant="destructive" onSelect={() => ondelete(task)}>
-					Delete
-				</DropdownMenu.Item>
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
-	</div>
+	<TaskMenu {task} onmove={onstatuschange} {ondelete} />
 </div>

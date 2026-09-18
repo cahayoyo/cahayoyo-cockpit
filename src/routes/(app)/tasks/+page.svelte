@@ -16,7 +16,7 @@
 	import TaskKanban from '$lib/components/tasks/TaskKanban.svelte';
 	import TaskList from '$lib/components/tasks/TaskList.svelte';
 	import TaskToolbar from '$lib/components/tasks/TaskToolbar.svelte';
-	import type { TaskFilterPatch, TaskItem, TaskProgress } from '$lib/components/tasks/types.js';
+	import type { TaskFilterPatch, TaskItem } from '$lib/components/tasks/types.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { submitAction } from '$lib/forms.js';
@@ -27,6 +27,8 @@
 		sortTasks
 	} from '$lib/tasks/filters.js';
 	import { buildTaskSearch, type TaskSearch } from '$lib/tasks/params.js';
+	import { deleteTaskDescription } from '$lib/tasks/presentation.js';
+	import { groupByParent, subtaskProgress } from '$lib/tasks/subtasks.js';
 	import type { PageProps } from './$types.js';
 
 	let { data }: PageProps = $props();
@@ -52,21 +54,8 @@
 	const view = $derived(data.view === 'kanban' && filters.projectId !== null ? 'kanban' : 'list');
 	const selected = $derived(data.tasks.find((task) => task.id === data.filters.taskId) ?? null);
 
-	const childrenOf = $derived.by(() => {
-		const map: Record<string, TaskItem[]> = {};
-		for (const task of data.tasks) {
-			if (task.parentId === null) continue;
-			(map[task.parentId] ??= []).push(task);
-		}
-		return map;
-	});
-	const progressOf = (id: string): TaskProgress => {
-		const children = childrenOf[id] ?? [];
-		return {
-			done: children.filter((task) => task.status === 'done').length,
-			total: children.length
-		};
-	};
+	const childrenOf = $derived(groupByParent(data.tasks));
+	const progressOf = (id: string) => subtaskProgress(childrenOf.get(id) ?? []);
 
 	const parents = $derived(data.tasks.filter((task) => task.parentId === null));
 	const items = $derived(
@@ -80,6 +69,7 @@
 	const hasFilters = $derived(
 		filters.status !== 'active' ||
 			filters.priority !== 'all' ||
+			filters.tag !== null ||
 			filters.due !== 'any' ||
 			filters.q.trim() !== ''
 	);
@@ -92,7 +82,7 @@
 				projectId,
 				status: patch.status ?? filters.status,
 				priority: patch.priority ?? filters.priority,
-				tag: filters.tag,
+				tag: patch.tag === undefined ? filters.tag : patch.tag,
 				due: patch.due ?? filters.due,
 				q: patch.q ?? filters.q,
 				sort: patch.sort ?? filters.sort,
@@ -206,7 +196,7 @@
 			<Button
 				variant="outline"
 				size="sm"
-				onclick={() => apply({ status: 'active', priority: 'all', due: 'any', q: '' })}
+				onclick={() => apply({ status: 'active', priority: 'all', tag: null, due: 'any', q: '' })}
 			>
 				Clear filters
 			</Button>
@@ -230,7 +220,7 @@
 <TaskDetailDialog
 	open={dialogOpen}
 	task={selected}
-	subtasks={selected ? (childrenOf[selected.id] ?? []) : []}
+	subtasks={selected ? (childrenOf.get(selected.id) ?? []) : []}
 	projects={data.projects}
 	tags={data.tags}
 	defaultProjectId={filters.projectId ?? inboxId}
@@ -247,11 +237,7 @@
 <ConfirmDialog
 	bind:open={confirmOpen}
 	title="Delete task"
-	description={confirming
-		? `"${confirming.title || 'Untitled'}" will be deleted${
-				confirming.parentId === null ? ', together with its subtasks' : ''
-			}.`
-		: ''}
+	description={confirming ? deleteTaskDescription(confirming) : ''}
 	confirmLabel="Delete task"
 	action="?/deleteTask"
 	fields={confirming ? { id: confirming.id } : {}}
