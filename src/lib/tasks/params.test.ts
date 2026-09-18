@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { INBOX_PROJECT_ID } from '$lib/ids';
 import { buildTaskSearch, parseTaskSearch, parseTaskView, type TaskSearch } from './params';
 
 const PROJECT_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
@@ -32,9 +33,8 @@ describe('parseTaskSearch', () => {
 	});
 
 	test('keeps the seeded Inbox id (not an RFC 9562 UUID)', () => {
-		const inboxId = '00000000-0000-0000-0000-000000000001';
-		expect(parse(`project=${inboxId}`).projectId).toBe(inboxId);
-		expect(parse(`task=${inboxId}`).taskId).toBe(inboxId);
+		expect(parse(`project=${INBOX_PROJECT_ID}`).projectId).toBe(INBOX_PROJECT_ID);
+		expect(parse(`task=${INBOX_PROJECT_ID}`).taskId).toBe(INBOX_PROJECT_ID);
 	});
 
 	test('trims the query without changing its case', () => {

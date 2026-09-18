@@ -1,4 +1,5 @@
 import { asc, count, eq, inArray } from 'drizzle-orm';
+import { INBOX_PROJECT_ID } from '$lib/ids';
 import {
 	filterTasks,
 	normalizePriorityFilter,
@@ -14,9 +15,6 @@ import { db } from './db';
 import { project, task, taskPriority, taskStatus, taskTag, tag } from './db/schema';
 import { ensureTagIds } from './tags';
 import type { TaskFormInput, TaskStatus } from './tasks-schemas';
-
-// Fixed id seeded by migration 0001: the Inbox always exists and cannot be deleted.
-export const INBOX_PROJECT_ID = '00000000-0000-0000-0000-000000000001';
 
 export type TaskListItem = typeof task.$inferSelect & { tags: string[] };
 export type ProjectListItem = typeof project.$inferSelect & {
