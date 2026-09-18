@@ -1,4 +1,4 @@
-import { pick, randomInt } from './random.js';
+import { pick, randomInt } from './random';
 
 // Static Indonesian name lists (decision 14): 40 first + 40 last names,
 // combined randomly and gender-neutral.

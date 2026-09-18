@@ -1,4 +1,4 @@
-import { randomInt } from './random.js';
+import { randomInt } from './random';
 
 export const LOWERCASE = 'abcdefghijklmnopqrstuvwxyz';
 export const UPPERCASE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';

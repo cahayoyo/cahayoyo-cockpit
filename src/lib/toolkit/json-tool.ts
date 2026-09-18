@@ -17,14 +17,14 @@ export function parseJson(input: string): JsonParseResult {
 		return { ok: true, value: JSON.parse(trimmed) };
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Invalid JSON.';
-		return { ok: false, message, ...locate(trimmed) };
+		return { ok: false, message, ...locateSyntaxError(trimmed) };
 	}
 }
 
-export function formatJson(input: string, indent = 2): JsonOutputResult {
+export function formatJson(input: string): JsonOutputResult {
 	const result = parseJson(input);
 	if (!result.ok) return result;
-	return { ok: true, output: JSON.stringify(result.value, null, indent) ?? '' };
+	return { ok: true, output: JSON.stringify(result.value, null, 2) ?? '' };
 }
 
 export function minifyJson(input: string): JsonOutputResult {
@@ -35,10 +35,10 @@ export function minifyJson(input: string): JsonOutputResult {
 
 // Modern V8 and JavaScriptCore messages carry no position, so the first syntax
 // error is relocated with a scanner and turned into a 1-based line/column.
-function locate(input: string): { line: number | null; column: number | null } {
+function locateSyntaxError(input: string): { line: number | null; column: number | null } {
 	let position: number | null;
 	try {
-		position = findFirstError(input);
+		position = findFirstErrorPosition(input);
 	} catch {
 		// Deeply nested input can overflow the scan recursion; fall back to the message alone.
 		return { line: null, column: null };
@@ -54,7 +54,7 @@ function locate(input: string): { line: number | null; column: number | null } {
 
 const NUMBER_LITERAL = /-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
 
-function findFirstError(input: string): number | null {
+function findFirstErrorPosition(input: string): number | null {
 	let position = 0;
 	let errorAt: number | null = null;
 

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { countText } from './counter';
 import { formatJson, minifyJson, parseJson } from './json-tool';
+import { pick, randomInt } from './random';
 import {
 	charsetAlphabet,
 	DEFAULT_CHARSET,
@@ -37,6 +38,28 @@ describe('countText', () => {
 		expect(stats.words).toBe(0);
 		expect(stats.lines).toBe(0);
 		expect(stats.occurrences).toBe(0);
+	});
+});
+
+describe('random', () => {
+	test('returns 0 for invalid bounds', () => {
+		expect(randomInt(0)).toBe(0);
+		expect(randomInt(-5)).toBe(0);
+		expect(randomInt(Number.NaN)).toBe(0);
+		expect(randomInt(Number.POSITIVE_INFINITY)).toBe(0);
+	});
+
+	test('stays within the requested range', () => {
+		for (let index = 0; index < 50; index += 1) {
+			const value = randomInt(3);
+			expect(Number.isInteger(value)).toBe(true);
+			expect(value).toBeGreaterThanOrEqual(0);
+			expect(value).toBeLessThan(3);
+		}
+	});
+
+	test('pick returns an element of the list', () => {
+		expect(['a', 'b', 'c']).toContain(pick(['a', 'b', 'c']));
 	});
 });
 
