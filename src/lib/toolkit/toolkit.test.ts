@@ -101,6 +101,18 @@ describe('json-tool', () => {
 		expect(result.column).toBe(8);
 	});
 
+	test('locates errors relative to the raw input', () => {
+		const indented = parseJson('  {"a": }');
+		expect(indented.ok).toBe(false);
+		if (indented.ok) return;
+		expect([indented.line, indented.column]).toEqual([1, 9]);
+
+		const padded = parseJson('\n\n{"a": }');
+		expect(padded.ok).toBe(false);
+		if (padded.ok) return;
+		expect([padded.line, padded.column]).toEqual([3, 7]);
+	});
+
 	test('formatJson carries the located error through', () => {
 		const result = formatJson('{"a": }');
 		expect(result.ok).toBe(false);

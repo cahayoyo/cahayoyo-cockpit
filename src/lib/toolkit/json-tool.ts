@@ -10,14 +10,14 @@ export type JsonParseResult = { ok: true; value: unknown } | JsonError;
 export type JsonOutputResult = { ok: true; output: string } | JsonError;
 
 export function parseJson(input: string): JsonParseResult {
-	const trimmed = input.trim();
-	if (trimmed === '') return { ok: false, message: 'Input is empty.', line: null, column: null };
+	if (input.trim() === '')
+		return { ok: false, message: 'Input is empty.', line: null, column: null };
 
 	try {
-		return { ok: true, value: JSON.parse(trimmed) };
+		return { ok: true, value: JSON.parse(input.trim()) };
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Invalid JSON.';
-		return { ok: false, message, ...locateSyntaxError(trimmed) };
+		return { ok: false, message, ...locateSyntaxError(input) };
 	}
 }
 
