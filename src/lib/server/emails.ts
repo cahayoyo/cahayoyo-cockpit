@@ -1,4 +1,4 @@
-import { asc, eq, isNotNull } from 'drizzle-orm';
+import { asc, desc, eq, isNotNull } from 'drizzle-orm';
 import type { EmailFormInput } from '$lib/emails/schemas';
 import type { EmailStatus } from '$lib/emails/types';
 import { db } from './db';
@@ -14,7 +14,8 @@ export async function listEmails(): Promise<EmailListItem[]> {
 	const rows = await db
 		.select({ email: disposableEmail, taskTitle: task.title })
 		.from(disposableEmail)
-		.leftJoin(task, eq(disposableEmail.taskId, task.id));
+		.leftJoin(task, eq(disposableEmail.taskId, task.id))
+		.orderBy(desc(disposableEmail.createdAt));
 
 	return rows.map((row) => ({ ...row.email, taskTitle: row.taskTitle }));
 }
