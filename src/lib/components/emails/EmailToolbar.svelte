@@ -66,7 +66,7 @@
 				bind:value={draft}
 				oninput={onSearch}
 				placeholder="Search address, purpose, notes"
-				class="pl-8"
+				class="pl-8 max-sm:h-11"
 				aria-label="Search disposable emails"
 			/>
 		</div>
@@ -77,7 +77,7 @@
 				value={status}
 				onValueChange={(value) => onfilter({ status: value })}
 			>
-				<Select.Trigger class="w-full sm:w-auto" aria-label="Filter by status">
+				<Select.Trigger class="w-full max-sm:h-11! sm:w-auto" aria-label="Filter by status">
 					{statusLabel}
 				</Select.Trigger>
 				<Select.Content>
@@ -95,7 +95,7 @@
 				value={provider ?? 'all'}
 				onValueChange={(value) => onfilter({ provider: value === 'all' ? null : value })}
 			>
-				<Select.Trigger class="w-full sm:w-auto" aria-label="Filter by provider">
+				<Select.Trigger class="w-full max-sm:h-11! sm:w-auto" aria-label="Filter by provider">
 					{provider ?? 'All providers'}
 				</Select.Trigger>
 				<Select.Content>
