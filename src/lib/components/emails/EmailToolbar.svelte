@@ -9,7 +9,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Select from '$lib/components/ui/select/index.js';
 	import type { EmailStatusFilter } from '$lib/emails/filters.js';
-	import { EMAIL_STATUS_META } from '$lib/emails/presentation.js';
+	import { EMAIL_STATUS_META, EMAIL_STATUS_ORDER } from '$lib/emails/presentation.js';
 	import type { EmailFilterPatch } from '$lib/emails/types.js';
 
 	let {
@@ -53,13 +53,7 @@
 	onDestroy(() => clearTimeout(timer));
 
 	const filtersActive = $derived(q.trim().length > 0 || status !== 'active' || provider !== null);
-	const statusLabel = $derived(
-		status === 'active'
-			? EMAIL_STATUS_META.active.label
-			: status === 'dead'
-				? EMAIL_STATUS_META.dead.label
-				: 'All statuses'
-	);
+	const statusLabel = $derived(status === 'all' ? 'All statuses' : EMAIL_STATUS_META[status].label);
 </script>
 
 <div class="flex flex-col gap-3">
@@ -87,8 +81,11 @@
 					{statusLabel}
 				</Select.Trigger>
 				<Select.Content>
-					<Select.Item value="active" label="Active">Active</Select.Item>
-					<Select.Item value="dead" label="Dead">Dead</Select.Item>
+					{#each EMAIL_STATUS_ORDER as option (option)}
+						<Select.Item value={option} label={EMAIL_STATUS_META[option].label}>
+							{EMAIL_STATUS_META[option].label}
+						</Select.Item>
+					{/each}
 					<Select.Item value="all" label="All statuses">All statuses</Select.Item>
 				</Select.Content>
 			</Select.Root>

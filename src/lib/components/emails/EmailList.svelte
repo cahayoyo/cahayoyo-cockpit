@@ -6,6 +6,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { EMAIL_STATUS_META, EMAIL_STATUS_ORDER } from '$lib/emails/presentation.js';
 	import type { EmailItem } from '$lib/emails/types.js';
+	import { dateInAppZone } from '$lib/tasks/today.js';
 	import EmailMenu from './EmailMenu.svelte';
 	import type { EmailRow } from './types.js';
 
@@ -28,8 +29,6 @@
 			emails: emails.filter((email) => email.status === status)
 		})).filter((group) => group.emails.length > 0)
 	);
-
-	const formatDate = (date: Date) => date.toISOString().slice(0, 10);
 </script>
 
 {#snippet row(email: EmailRow)}
@@ -37,7 +36,7 @@
 		<div class="flex min-w-0 items-center gap-1">
 			<button
 				type="button"
-				class="min-w-0 max-w-full truncate text-left text-sm font-medium hover:underline"
+				class="min-w-0 max-w-full truncate text-left text-sm font-medium hover:underline max-lg:min-h-11"
 				onclick={() => onedit(email)}
 			>
 				{email.address}
@@ -66,7 +65,7 @@
 					{email.taskTitle}
 				</a>
 			{/if}
-			<span class="ml-auto shrink-0 tabular-nums">{formatDate(email.createdAt)}</span>
+			<span class="ml-auto shrink-0 tabular-nums">{dateInAppZone(email.createdAt)}</span>
 		</div>
 	</div>
 {/snippet}

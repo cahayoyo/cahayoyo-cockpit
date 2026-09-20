@@ -32,12 +32,15 @@
 
 	const loading = $derived(navigating.to !== null);
 	const items = $derived(filterEmails(data.items, data.filters));
-	const providers = $derived([...new Set([...PROVIDER_SUGGESTIONS, ...data.providers])]);
+	const providerSuggestions = $derived([...new Set([...PROVIDER_SUGGESTIONS, ...data.providers])]);
 	const taskOptions = $derived.by<EmailTaskOption[]>(() => {
 		const projectNames = new Map(data.projects.map((project) => [project.id, project.name]));
+		// The linked task stays selectable while editing even when it has since
+		// become done, so the select never shows "No task" over a kept link.
+		const linkedId = editing?.taskId ?? null;
 
 		return data.tasks
-			.filter((task) => task.status !== 'done')
+			.filter((task) => task.status !== 'done' || task.id === linkedId)
 			.map((task) => ({
 				id: task.id,
 				title: task.title,
@@ -95,7 +98,7 @@
 	q={data.filters.q}
 	status={data.filters.status}
 	provider={data.filters.provider}
-	{providers}
+	providers={data.providers}
 	count={items.length}
 	onfilter={applyFilters}
 	onnew={openNew}
@@ -131,7 +134,12 @@
 	<EmailList emails={items} onedit={openEdit} ontoggle={toggleStatus} ondelete={askDelete} />
 {/if}
 
-<EmailDialog bind:open={dialogOpen} email={editing} tasks={taskOptions} {providers} />
+<EmailDialog
+	bind:open={dialogOpen}
+	email={editing}
+	tasks={taskOptions}
+	providers={providerSuggestions}
+/>
 
 <ConfirmDialog
 	bind:open={confirmOpen}
