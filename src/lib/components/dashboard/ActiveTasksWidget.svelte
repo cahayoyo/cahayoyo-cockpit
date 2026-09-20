@@ -25,7 +25,12 @@
 			<div class="flex flex-col items-center gap-3 py-4 text-center">
 				<SquareCheckBig class="size-6 text-muted-foreground" />
 				<p class="text-sm text-muted-foreground">No active tasks.</p>
-				<Button variant="outline" size="sm" href={resolve('/tasks?status=active')}>
+				<Button
+					variant="outline"
+					size="sm"
+					class="max-sm:h-11"
+					href={resolve('/tasks?status=active')}
+				>
 					View tasks
 				</Button>
 			</div>
@@ -44,9 +49,9 @@
 					<li class="flex items-center gap-2">
 						<a
 							href={resolve(`/tasks?task=${task.id}`)}
-							class="min-w-0 flex-1 truncate text-sm hover:underline"
+							class="flex min-w-0 flex-1 items-center text-sm hover:underline max-lg:min-h-11"
 						>
-							{task.title}
+							<span class="truncate">{task.title}</span>
 						</a>
 						<Badge variant="outline" class={STATUS_META[task.status].badge}>
 							{STATUS_META[task.status].label}

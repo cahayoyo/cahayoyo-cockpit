@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import type { FilterableTask } from '$lib/tasks/filters';
 import {
 	ACTIVE_TASK_STATUSES,
 	selectActiveTasks,
@@ -9,18 +10,28 @@ import {
 
 const TODAY = '2026-09-20';
 
-type Task = { id: string; status: string; dueDate: string | null };
+type Task = FilterableTask & { id: string };
 
 function task(id: string, status: string, dueDate: string | null = null): Task {
-	return { id, status, dueDate };
+	return {
+		id,
+		title: id,
+		description: null,
+		projectId: 'p1',
+		status,
+		priority: 'medium',
+		dueDate,
+		tags: [],
+		createdAt: new Date('2026-09-01T03:00:00Z')
+	};
 }
 
 describe('selectTodayTasks', () => {
-	test('keeps due and overdue non-Done tasks, soonest first', () => {
+	test('keeps due and overdue non-Done tasks in the incoming (due-sorted) order', () => {
 		const { items, hidden } = selectTodayTasks(
 			[
-				task('today', 'in_progress', TODAY),
 				task('overdue', 'backlog', '2026-09-18'),
+				task('today', 'in_progress', TODAY),
 				task('future', 'backlog', '2026-09-21'),
 				task('undated', 'backlog', null),
 				task('done', 'done', '2026-09-18')

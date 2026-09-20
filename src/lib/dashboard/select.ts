@@ -1,5 +1,6 @@
 // Pure selection helpers for the dashboard widgets (variant A): the route load
 // fetches the full lists once and these helpers derive the widget-sized slices.
+import { ALL_TASKS, filterTasks, type FilterableTask, type TaskFilters } from '$lib/tasks/filters';
 
 export const ACTIVE_TASK_STATUSES = [
 	'in_progress',
@@ -15,7 +16,9 @@ const ACTIVE_LIMIT = 5;
 const RECENT_NOTES_LIMIT = 5;
 const FAVORITE_BOOKMARKS_LIMIT = 6;
 
-type DueTask = { status: string; dueDate: string | null };
+// Same scope as the /today page: due today or overdue, Done excluded.
+const TODAY_FILTERS: TaskFilters = { ...ALL_TASKS, status: 'active', due: 'today_or_overdue' };
+
 type StatusTask = { status: string };
 type DatedNote = { updatedAt: Date };
 type FavoriteBookmark = { favorite: boolean };
@@ -24,17 +27,13 @@ function isActiveStatus(status: string): status is ActiveTaskStatus {
 	return (ACTIVE_TASK_STATUSES as readonly string[]).includes(status);
 }
 
-/** Due today or overdue and not Done, soonest first, capped; `hidden` counts the rest. */
-export function selectTodayTasks<T extends DueTask>(
+/** Due today or overdue and not Done, capped; `hidden` counts the rest. */
+export function selectTodayTasks<T extends FilterableTask>(
 	tasks: readonly T[],
 	today: string
 ): { items: T[]; hidden: number } {
-	const due = tasks
-		.filter(
-			(task): task is T & { dueDate: string } =>
-				task.dueDate !== null && task.dueDate <= today && task.status !== 'done'
-		)
-		.sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+	// The loaded list is already due-date sorted (listTasks), so filtering preserves the order.
+	const due = filterTasks(tasks, TODAY_FILTERS, today);
 
 	return { items: due.slice(0, TODAY_LIMIT), hidden: Math.max(0, due.length - TODAY_LIMIT) };
 }

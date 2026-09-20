@@ -16,7 +16,9 @@
 		<div class="flex flex-col items-center gap-3 py-4 text-center">
 			<NotebookPen class="size-6 text-muted-foreground" />
 			<p class="text-sm text-muted-foreground">No notes yet.</p>
-			<Button variant="outline" size="sm" href={resolve('/notes')}>Add a note</Button>
+			<Button variant="outline" size="sm" class="max-sm:h-11" href={resolve('/notes')}>
+				Add a note
+			</Button>
 		</div>
 	{:else}
 		<ul class="space-y-2">
@@ -24,9 +26,9 @@
 				<li class="flex items-center gap-2">
 					<a
 						href={resolve(`/notes?note=${note.id}`)}
-						class="min-w-0 flex-1 truncate text-sm hover:underline"
+						class="flex min-w-0 flex-1 items-center text-sm hover:underline max-lg:min-h-11"
 					>
-						{note.title}
+						<span class="truncate">{note.title}</span>
 					</a>
 					<span class="shrink-0 text-xs text-muted-foreground tabular-nums">
 						{dateInAppZone(note.updatedAt)}

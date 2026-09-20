@@ -10,7 +10,7 @@
 	type WidgetHref =
 		| '/today'
 		| '/notes'
-		| '/bookmarks?favorite=1'
+		| '/bookmarks?favorite=true'
 		| '/tasks?status=active'
 		| `/tasks?task=${string}`
 		| `/notes?note=${string}`;
@@ -34,7 +34,7 @@
 		<Card.Action>
 			<a
 				href={resolve(href)}
-				class="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+				class="inline-flex items-center text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline max-lg:min-h-11"
 			>
 				{linkLabel}
 			</a>

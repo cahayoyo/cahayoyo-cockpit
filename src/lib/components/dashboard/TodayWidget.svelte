@@ -63,7 +63,9 @@
 			<div class="flex flex-col items-center gap-3 py-4 text-center">
 				<CalendarCheck class="size-6 text-muted-foreground" />
 				<p class="text-sm text-muted-foreground">Nothing due today or overdue.</p>
-				<Button variant="outline" size="sm" onclick={() => input?.focus()}>Add a task</Button>
+				<Button variant="outline" size="sm" class="max-sm:h-11" onclick={() => input?.focus()}>
+					Add a task
+				</Button>
 			</div>
 		{:else}
 			<ul class="space-y-2">
@@ -71,9 +73,9 @@
 					<li class="flex items-center gap-2">
 						<a
 							href={resolve(`/tasks?task=${task.id}`)}
-							class="min-w-0 flex-1 truncate text-sm hover:underline"
+							class="flex min-w-0 flex-1 items-center text-sm hover:underline max-lg:min-h-11"
 						>
-							{task.title}
+							<span class="truncate">{task.title}</span>
 						</a>
 						<Badge variant="outline" class={STATUS_META[task.status].badge}>
 							{STATUS_META[task.status].label}
@@ -94,7 +96,7 @@
 			{#if hidden > 0}
 				<a
 					href={resolve('/today')}
-					class="block text-xs text-muted-foreground hover:text-foreground"
+					class="flex items-center text-xs text-muted-foreground hover:text-foreground max-lg:min-h-11"
 				>
 					+{hidden} more
 				</a>
