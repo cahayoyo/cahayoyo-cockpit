@@ -2,8 +2,8 @@
 	// Create/edit dialog (final in every prototype variant): type-conditional
 	// labels per grill decision 9, the shared password generator popover, tags as
 	// a comma-separated draft (the server parses them). `secret`/`notes` are the
-	// plaintext prefilled from the reveal endpoint; the client check only gates
-	// the submit button — vaultFormSchema validates again server-side.
+	// plaintext prefilled from the reveal endpoint; the same client-safe
+	// vaultFormSchema gates the submit button and validates server-side.
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -13,6 +13,7 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { failureMessage } from '$lib/forms.js';
+	import { vaultFormSchema } from '$lib/vault/schemas.js';
 	import { VAULT_TYPE_META } from '$lib/vault/presentation.js';
 	import { VAULT_TYPES, type VaultEntryItem, type VaultType } from '$lib/vault/types.js';
 	import PasswordGeneratorPopover from './PasswordGeneratorPopover.svelte';
@@ -67,10 +68,17 @@
 				? 'API key value'
 				: 'Write the note to keep encrypted'
 	);
+	// The same schema the server action validates with gates the submit button.
 	const invalid = $derived(
-		draft.title.trim() === '' ||
-			draft.secret.trim() === '' ||
-			(draft.type === 'login' && draft.username.trim() === '')
+		!vaultFormSchema.safeParse({
+			title: draft.title,
+			type: draft.type,
+			username: draft.username,
+			secret: draft.secret,
+			url: draft.url,
+			notes: draft.notes,
+			tags: draft.tagsText
+		}).success
 	);
 
 	// Reset the draft when the dialog opens (or switches entry) — never on a
@@ -243,8 +251,12 @@
 			{/if}
 
 			<Dialog.Footer>
-				<Button type="button" variant="secondary" onclick={() => (open = false)}>Cancel</Button>
-				<Button type="submit" disabled={invalid}>{entry ? 'Save' : 'Create entry'}</Button>
+				<Button type="button" variant="secondary" class="max-sm:h-11" onclick={() => (open = false)}
+					>Cancel</Button
+				>
+				<Button type="submit" class="max-sm:h-11" disabled={invalid}>
+					{entry ? 'Save' : 'Create entry'}
+				</Button>
 			</Dialog.Footer>
 		</form>
 	</Dialog.Content>

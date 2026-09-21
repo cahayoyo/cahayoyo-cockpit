@@ -23,10 +23,7 @@
 
 <div class="flex min-w-0 flex-col items-end gap-0.5">
 	<div class="flex items-center gap-1">
-		<span
-			class="max-w-44 truncate font-mono text-xs text-muted-foreground"
-			aria-label={revealed ? 'Secret revealed' : 'Secret hidden'}
-		>
+		<span class="max-w-44 truncate font-mono text-xs text-muted-foreground">
 			{revealed && value ? value : masked}
 		</span>
 		<Button

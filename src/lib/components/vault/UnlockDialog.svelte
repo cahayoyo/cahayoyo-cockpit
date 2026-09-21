@@ -69,8 +69,10 @@
 			</div>
 
 			<Dialog.Footer>
-				<Button type="button" variant="secondary" onclick={() => (open = false)}>Cancel</Button>
-				<Button type="submit" disabled={password === ''}>Unlock</Button>
+				<Button type="button" variant="secondary" class="max-sm:h-11" onclick={() => (open = false)}
+					>Cancel</Button
+				>
+				<Button type="submit" class="max-sm:h-11" disabled={password === ''}>Unlock</Button>
 			</Dialog.Footer>
 		</form>
 	</Dialog.Content>

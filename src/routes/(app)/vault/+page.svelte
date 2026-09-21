@@ -12,6 +12,7 @@
 	import { onMount } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
+	import { z } from 'zod';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -41,7 +42,20 @@
 		reason: 'locked' | 'missing' | 'undecryptable' | 'invalid' | 'error';
 		message: string;
 	};
-	type RevealOutcome = { ok: true; secret: string; notes: string | null } | RevealFailure;
+	type RevealSuccess = { ok: true; secret: string; notes: string | null };
+	type RevealOutcome = RevealSuccess | RevealFailure;
+
+	// The reveal wire is a trust boundary: parse it instead of asserting the shape.
+	const revealSuccessSchema = z.object({
+		ok: z.literal(true),
+		secret: z.string(),
+		notes: z.string().nullable()
+	});
+	const revealFailureSchema = z.object({
+		ok: z.literal(false),
+		reason: z.enum(['locked', 'missing', 'undecryptable', 'invalid', 'error']).catch('error'),
+		message: z.string()
+	});
 
 	const filters = $derived(parseVaultSearch(page.url.searchParams));
 	const view = $derived(filters.view);
@@ -58,7 +72,6 @@
 	let secrets = $state<Record<string, string>>({});
 	let revealErrors = $state<Record<string, string>>({});
 	let decryptFailed = new SvelteSet<string>();
-	let banner = $state(false);
 	let unlockOpen = $state(false);
 	let pending = $state<(() => void | Promise<void>) | null>(null);
 
@@ -69,10 +82,10 @@
 	let confirmOpen = $state(false);
 	let deleteTarget = $state<VaultEntryItem | null>(null);
 
-	// Locked means every cached plaintext is stale: drop it and show the banner.
+	// Locked means every cached plaintext is stale: drop it (the banner is driven
+	// by `locked` itself).
 	function lockDown(): void {
 		forcedLocked = true;
-		banner = true;
 		revealed.clear();
 		decryptFailed.clear();
 		secrets = {};
@@ -95,13 +108,11 @@
 		}
 
 		pending = action;
-		banner = true;
 		unlockOpen = true;
 	}
 
 	function unlock(): void {
 		forcedLocked = false;
-		banner = false;
 		const action = pending;
 		pending = null;
 		void action?.();
@@ -118,10 +129,22 @@
 
 		try {
 			const response = await fetch(resolve('/vault/reveal'), { method: 'POST', body });
-			return (await response.json()) as RevealOutcome;
+			const payload: unknown = await response.json();
+
+			const success = revealSuccessSchema.safeParse(payload);
+			if (success.success) {
+				return success.data;
+			}
+
+			const failure = revealFailureSchema.safeParse(payload);
+			if (failure.success) {
+				return failure.data;
+			}
 		} catch {
-			return { ok: false, reason: 'error', message: 'Something went wrong.' };
+			// Fall through to the generic failure below.
 		}
+
+		return { ok: false, reason: 'error', message: 'Something went wrong.' };
 	}
 
 	function revealFailed(
@@ -175,19 +198,19 @@
 	}
 
 	async function doCopySecret(entry: VaultEntryItem): Promise<void> {
-		if (secrets[entry.id] === undefined) {
-			const result = await fetchSecret(entry.id);
-			if (!result.ok) {
-				revealFailed(entry, result, () => doCopySecret(entry));
-				return;
-			}
-
-			secrets[entry.id] = result.secret;
-			delete revealErrors[entry.id];
+		// Always go through the server: copying is a vault action, so it must
+		// re-check the lock and refresh the idle window (grill decisions 2/4).
+		const result = await fetchSecret(entry.id);
+		if (!result.ok) {
+			revealFailed(entry, result, () => doCopySecret(entry));
+			return;
 		}
 
+		secrets[entry.id] = result.secret;
+		delete revealErrors[entry.id];
+
 		try {
-			await navigator.clipboard.writeText(secrets[entry.id]);
+			await navigator.clipboard.writeText(result.secret);
 			toast.success('Password copied');
 		} catch {
 			toast.error('Could not copy to the clipboard.');
@@ -295,7 +318,7 @@
 	</Button>
 </div>
 
-{#if banner}
+{#if locked}
 	<div
 		class="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm"
 		role="status"
