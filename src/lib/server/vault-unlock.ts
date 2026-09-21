@@ -11,9 +11,8 @@ export const VAULT_UNLOCK_IDLE_MS = 15 * 60 * 1000;
 type CookieReader = Pick<Cookies, 'get'>;
 type CookieWriter = Pick<Cookies, 'set' | 'delete'>;
 
-function unlockSecret(): string {
-	return envSchema.parse(process.env).BETTER_AUTH_SECRET;
-}
+// Read once at boot; a missing secret fails fast (env.ts).
+const unlockSecret = envSchema.parse(process.env).BETTER_AUTH_SECRET;
 
 function signatureFor(timestamp: number, secret: string): string {
 	return createHmac('sha256', secret).update(String(timestamp)).digest('base64url');
@@ -47,7 +46,7 @@ export function verifyUnlockToken(token: string, now: number, secret: string): b
 /** True while a valid, unexpired unlock cookie is present. */
 export function isVaultUnlocked(cookies: CookieReader, now = Date.now()): boolean {
 	const token = cookies.get(VAULT_UNLOCK_COOKIE);
-	return token !== undefined && verifyUnlockToken(token, now, unlockSecret());
+	return token !== undefined && verifyUnlockToken(token, now, unlockSecret);
 }
 
 /**
@@ -55,7 +54,7 @@ export function isVaultUnlocked(cookies: CookieReader, now = Date.now()): boolea
  * it dies with the browser, on idle expiry, and is cleared on logout.
  */
 export function issueVaultUnlock(cookies: CookieWriter, now = Date.now()): void {
-	cookies.set(VAULT_UNLOCK_COOKIE, signUnlockToken(now, unlockSecret()), {
+	cookies.set(VAULT_UNLOCK_COOKIE, signUnlockToken(now, unlockSecret), {
 		path: '/vault',
 		httpOnly: true,
 		sameSite: 'lax',

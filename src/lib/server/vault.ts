@@ -16,9 +16,8 @@ export type RevealResult =
 	| { ok: true; secret: string; notes: string | null }
 	| { ok: false; reason: 'missing' | 'undecryptable'; error: string };
 
-function vaultKey(): Buffer {
-	return Buffer.from(envSchema.parse(process.env).VAULT_ENCRYPTION_KEY, 'base64');
-}
+// Decoded once at boot; a missing or malformed key fails fast (env.ts).
+const vaultKey = Buffer.from(envSchema.parse(process.env).VAULT_ENCRYPTION_KEY, 'base64');
 
 /** Every entry's metadata plus its tag names — never the encrypted columns. */
 export async function listVaultEntries(): Promise<VaultEntryItem[]> {
@@ -77,7 +76,7 @@ function entryValues(input: VaultFormInput, key: Buffer) {
 }
 
 export async function createEntry(input: VaultFormInput): Promise<CreateResult> {
-	const key = vaultKey();
+	const key = vaultKey;
 
 	return db.transaction(async (tx) => {
 		const [row] = await tx
@@ -91,7 +90,7 @@ export async function createEntry(input: VaultFormInput): Promise<CreateResult> 
 }
 
 export async function updateEntry(id: string, input: VaultFormInput): Promise<WriteResult> {
-	const key = vaultKey();
+	const key = vaultKey;
 
 	return db.transaction(async (tx) => {
 		const updated = await tx
@@ -129,7 +128,7 @@ export async function revealEntry(id: string): Promise<RevealResult> {
 		return { ok: false, reason: 'missing', error: 'This entry no longer exists.' };
 	}
 
-	const key = vaultKey();
+	const key = vaultKey;
 	const secret = decryptSecret(row.secretValue, key);
 	if (!secret.ok) {
 		return { ok: false, reason: 'undecryptable', error: secret.error };

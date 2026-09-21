@@ -10,7 +10,7 @@ export const vaultFormSchema = z
 		title: z.string().trim().min(1, 'Title is required.').max(200, 'Title is too long.'),
 		type: z.enum(VAULT_TYPES),
 		username: z.string().trim().max(200, 'Username is too long.'),
-		secret: z.string().min(1, 'Secret is required.'),
+		secret: z.string().min(1, 'Secret is required.').max(5000, 'Secret is too long.'),
 		url: z.string().trim().max(500, 'URL is too long.'),
 		notes: z.string().trim().max(5000, 'Notes are too long.'),
 		tags: z.string().transform(parseTags)

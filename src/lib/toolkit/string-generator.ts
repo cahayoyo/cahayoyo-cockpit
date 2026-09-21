@@ -28,8 +28,9 @@ export function charsetAlphabet(options: CharsetOptions): string {
 	return alphabet;
 }
 
-export function generateString(length: number, options: CharsetOptions): string {
-	const alphabet = charsetAlphabet(options);
+// Draws from a ready alphabet — shared by generateString and callers that
+// filter a charset first (the vault password generator).
+export function generateFromAlphabet(length: number, alphabet: string): string {
 	if (alphabet === '') return '';
 
 	const size = Math.min(Math.max(Math.trunc(Number(length)) || 1, 1), 256);
@@ -38,6 +39,10 @@ export function generateString(length: number, options: CharsetOptions): string 
 		output += alphabet[randomInt(alphabet.length)];
 	}
 	return output;
+}
+
+export function generateString(length: number, options: CharsetOptions): string {
+	return generateFromAlphabet(length, charsetAlphabet(options));
 }
 
 const ALPHANUMERIC = LOWERCASE + UPPERCASE + DIGITS;
