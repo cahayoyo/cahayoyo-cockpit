@@ -13,5 +13,9 @@ export const envSchema = z.object({
 		.refine((value) => Buffer.from(value, 'base64').length === VAULT_KEY_BYTES, {
 			message: 'VAULT_ENCRYPTION_KEY must be base64 for exactly 32 bytes'
 		}),
-	UPLOAD_DIR: z.string().min(1).optional()
+	// Cloudflare R2 media storage (private bucket, served through /media/[id]).
+	R2_ACCOUNT_ID: z.string().min(1, 'R2_ACCOUNT_ID is required'),
+	R2_ACCESS_KEY_ID: z.string().min(1, 'R2_ACCESS_KEY_ID is required'),
+	R2_SECRET_ACCESS_KEY: z.string().min(1, 'R2_SECRET_ACCESS_KEY is required'),
+	R2_BUCKET: z.string().min(1, 'R2_BUCKET is required')
 });

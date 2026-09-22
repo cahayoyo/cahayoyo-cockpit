@@ -1,20 +1,23 @@
-import { mkdir, rm } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { S3Client } from 'bun';
 import { count, desc, eq } from 'drizzle-orm';
 import { mediaUploadSchema } from '$lib/bookmarks/schemas';
-import type { UploadMimeType } from '$lib/bookmarks/upload';
+import { mediaObjectKey, type UploadMimeType } from '$lib/bookmarks/upload';
 import { extractMediaIds } from '$lib/notes/media-refs';
 import { db } from './db';
 import { bookmark, media, note } from './db/schema';
 import { envSchema } from './env';
 
-const uploadDir = resolve(envSchema.parse(process.env).UPLOAD_DIR ?? 'data/uploads');
+const env = envSchema.parse(process.env);
 
-const EXTENSIONS: Record<UploadMimeType, string> = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-	'image/webp': 'webp'
-};
+// Bun's native S3 client talks to the private R2 bucket (ADR-0004): no SDK
+// dependency, no public bucket, no presigned URLs — uploads and reads go
+// through the authenticated /media/[id] proxy.
+const s3 = new S3Client({
+	accessKeyId: env.R2_ACCESS_KEY_ID,
+	secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+	bucket: env.R2_BUCKET,
+	endpoint: `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+});
 
 export type MediaRow = typeof media.$inferSelect;
 export type MediaWithUsage = MediaRow & { usageCount: number };
@@ -23,10 +26,6 @@ export type SaveMediaResult = { ok: true; media: MediaRow } | { ok: false; error
 export type DeleteMediaResult =
 	{ ok: true } | { ok: false; bookmarkCount: number; noteCount: number };
 
-function mediaFilePath(storagePath: string): string {
-	return join(uploadDir, storagePath);
-}
-
 export async function saveMedia(file: File): Promise<SaveMediaResult> {
 	const parsed = mediaUploadSchema.safeParse(file);
 	if (!parsed.success) {
@@ -34,9 +33,9 @@ export async function saveMedia(file: File): Promise<SaveMediaResult> {
 	}
 
 	const id = crypto.randomUUID();
-	const storagePath = `${id}.${EXTENSIONS[file.type as UploadMimeType]}`;
-	await mkdir(uploadDir, { recursive: true });
-	await Bun.write(mediaFilePath(storagePath), file);
+	const storagePath = mediaObjectKey(id, file.type as UploadMimeType);
+	const object = s3.file(storagePath);
+	await object.write(file, { type: file.type });
 
 	try {
 		const [row] = await db
@@ -52,7 +51,7 @@ export async function saveMedia(file: File): Promise<SaveMediaResult> {
 
 		return { ok: true, media: row };
 	} catch (error) {
-		await rm(mediaFilePath(storagePath), { force: true });
+		await object.delete();
 		throw error;
 	}
 }
@@ -127,24 +126,22 @@ export async function deleteMedia(id: string): Promise<DeleteMediaResult> {
 
 	const [row] = await db.delete(media).where(eq(media.id, id)).returning();
 	if (row) {
-		await rm(mediaFilePath(row.storagePath), { force: true });
+		await s3.file(row.storagePath).delete();
 	}
 
 	return { ok: true };
 }
 
-export async function getMediaFile(
-	id: string
-): Promise<{ body: Bun.BunFile; mimeType: string } | null> {
+export async function getMediaFile(id: string): Promise<{ body: Blob; mimeType: string } | null> {
 	const [row] = await db.select().from(media).where(eq(media.id, id));
 	if (!row) {
 		return null;
 	}
 
-	const file = Bun.file(mediaFilePath(row.storagePath));
-	if (!(await file.exists())) {
+	const object = s3.file(row.storagePath);
+	if (!(await object.exists())) {
 		return null;
 	}
 
-	return { body: file, mimeType: row.mimeType };
+	return { body: object, mimeType: row.mimeType };
 }

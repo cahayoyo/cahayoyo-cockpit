@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { MAX_UPLOAD_BYTES, validateUpload } from './upload';
+import { MAX_UPLOAD_BYTES, mediaObjectKey, validateUpload } from './upload';
 
 describe('validateUpload', () => {
 	test('accepts jpeg, png, and webp within the size limit', () => {
@@ -25,5 +25,14 @@ describe('validateUpload', () => {
 		expect(validateUpload({ type: 'image/png', size: MAX_UPLOAD_BYTES + 1 })).toBe(
 			'Images must be 5 MB or smaller.'
 		);
+	});
+});
+
+describe('mediaObjectKey', () => {
+	test('names the object <uuid>.<ext> per mime type', () => {
+		const id = '7c9f4a1e-2b3d-4e5f-8a9b-0c1d2e3f4a5b';
+		expect(mediaObjectKey(id, 'image/jpeg')).toBe(`${id}.jpg`);
+		expect(mediaObjectKey(id, 'image/png')).toBe(`${id}.png`);
+		expect(mediaObjectKey(id, 'image/webp')).toBe(`${id}.webp`);
 	});
 });
