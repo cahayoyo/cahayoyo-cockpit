@@ -32,5 +32,5 @@ vite.config.ts.timestamp-*
 /graphify-out/
 /.codegraph/
 
-# Local media uploads (UPLOAD_DIR default)
+# Legacy local media uploads (media now lives in R2; kept so leftover files stay ignored)
 /data/
