@@ -53,4 +53,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && env.DOKPLOY_DEPLOY_WEBHOOK != ''
         env:
           DOKPLOY_DEPLOY_WEBHOOK: ${{ secrets.DOKPLOY_DEPLOY_WEBHOOK }}
-        run: curl --fail-with-body --silent --show-error --max-time 30 --request POST "$DOKPLOY_DEPLOY_WEBHOOK"
+        run: >-
+          curl --fail-with-body --silent --show-error --max-time 30
+          --write-out 'Dokploy webhook: HTTP %{http_code}\n'
+          --request POST "$DOKPLOY_DEPLOY_WEBHOOK"
