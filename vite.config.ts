@@ -13,7 +13,7 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 
-			// Bun is the deployment target (Docker/Coolify); see docs/agents/cahayoyo-docs/CONSTITUTION.md.
+			// Bun is the deployment target (Docker image, deployed via Dokploy); see docs/agents/cahayoyo-docs/CONSTITUTION.md.
 			adapter: adapter()
 		})
 	]

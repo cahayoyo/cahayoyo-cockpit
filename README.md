@@ -50,4 +50,12 @@ bun run db:migrate    # apply migrations
 
 ## Deployment
 
-Docker container on a Hostinger VPS via Coolify; production deploys from `main` only. Not provisioned yet.
+Docker container on a Hostinger VPS via Dokploy; PostgreSQL is Neon-managed and media lives in a private Cloudflare R2 bucket. Production deploys from `main` only. Not provisioned yet.
+
+Every push to `main` builds `Dockerfile` in GitHub Actions and pushes it to `ghcr.io/cahayoyo/cahayoyo-cockpit` (tags: commit sha + `latest`), then calls the Dokploy deploy webhook. Repository secret:
+
+| Secret                   | Purpose                                                     |
+| ------------------------ | ----------------------------------------------------------- |
+| `DOKPLOY_DEPLOY_WEBHOOK` | Dokploy deploy webhook URL; the step is skipped while unset |
+
+The registry package is private by default: Dokploy pulls it with a credential that has `read:packages` (classic PAT or fine-grained token). Migrations run in-container with `bun run db:migrate` — the runtime image carries `src/`, `scripts/`, and `drizzle/` for it.

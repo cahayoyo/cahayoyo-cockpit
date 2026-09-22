@@ -1,0 +1,14 @@
+node_modules
+build
+.svelte-kit
+.git
+.github
+docs
+data
+.env
+.env.*
+graphify-out
+.codegraph
+.serena
+*.log
+README.md
