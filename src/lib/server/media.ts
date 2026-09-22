@@ -132,7 +132,9 @@ export async function deleteMedia(id: string): Promise<DeleteMediaResult> {
 	return { ok: true };
 }
 
-export async function getMediaFile(id: string): Promise<{ body: Blob; mimeType: string } | null> {
+export async function getMediaFile(
+	id: string
+): Promise<{ body: ReadableStream<Uint8Array>; mimeType: string } | null> {
 	const [row] = await db.select().from(media).where(eq(media.id, id));
 	if (!row) {
 		return null;
@@ -143,5 +145,7 @@ export async function getMediaFile(id: string): Promise<{ body: Blob; mimeType: 
 		return null;
 	}
 
-	return { body: object, mimeType: row.mimeType };
+	// S3File is a Blob, but Bun's Response rejects ResponseInit options when the
+	// body is one; hand the proxy a plain stream so it can set its headers.
+	return { body: object.stream(), mimeType: row.mimeType };
 }
