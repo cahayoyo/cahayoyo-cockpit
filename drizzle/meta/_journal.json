@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789306033821,
+      "tag": "0000_fluffy_thunderbolts",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789306041365,
+      "tag": "0001_seed_inbox_project",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789307030929,
+      "tag": "0002_rainy_star_brand",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789407188131,
+      "tag": "0003_fuzzy_blink",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789717988779,
+      "tag": "0004_lame_tempest",
+      "breakpoints": true
+    }
+  ]
+}

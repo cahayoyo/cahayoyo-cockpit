@@ -1,8 +1,36 @@
-.serena/
+node_modules
+
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
 .env
 .env.*
 !.env.example
+!.env.test
 
-docs/
-AGENTS.md
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Local project docs + agent config (not published to the public repo)
+/docs
+/AGENTS.md
 /CONTEXT.md
+.serena/
+
+# Local tooling output (graphify, codegraph)
+/graphify-out/
+/.codegraph/
+
+# Legacy local media uploads (media now lives in R2; kept so leftover files stay ignored)
+/data/
