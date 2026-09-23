@@ -91,7 +91,7 @@
 		</Dialog.Header>
 
 		<form
-			class="space-y-4"
+			class="min-w-0 space-y-4"
 			method="post"
 			action="?/saveBookmark"
 			use:enhance={() =>

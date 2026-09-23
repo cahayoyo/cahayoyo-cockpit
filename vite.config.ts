@@ -16,5 +16,13 @@ export default defineConfig({
 			// Bun is the deployment target (Docker image, deployed via Dokploy); see docs/agents/cahayoyo-docs/CONSTITUTION.md.
 			adapter: adapter()
 		})
-	]
+	],
+
+	// `@better-auth/core/async_hooks` ships node and browser/edge variants; left external,
+	// the Bun adapter's rolldown re-bundles it with browser conditions and picks the
+	// non-async-local polyfill, which breaks Better Auth request state under concurrent
+	// requests in production (#63).
+	ssr: {
+		noExternal: ['@better-auth/core']
+	}
 });
