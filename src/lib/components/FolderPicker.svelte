@@ -135,13 +135,14 @@
 	<DropdownMenu.Trigger
 		type="button"
 		class={cn(
-			'border-input dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-full items-center justify-between gap-2 rounded-lg border bg-transparent px-2.5 py-1 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-3 max-lg:h-11',
+			'border-input dark:bg-input/30 dark:hover:bg-input/50 flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-transparent px-2.5 py-1 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:ring-3 max-lg:h-11',
 			className
 		)}
 		aria-label={label}
+		title={currentLabel}
 	>
-		{currentLabel}
-		<ChevronDown class="size-4 opacity-50" />
+		<span class="truncate">{currentLabel}</span>
+		<ChevronDown class="size-4 shrink-0 opacity-50" />
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content class="w-56" align="start">
 		<DropdownMenu.Item class="gap-2" onSelect={() => pick(null)}>
