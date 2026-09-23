@@ -2,8 +2,6 @@
 
 Self-hosted personal dashboard — bookmarks, notes, tasks, QA utilities, disposable-email tracking, and an encrypted vault in one place.
 
-> Status: v1.0.0 shipped and live at [cockpit.cahayoyo.tech](https://cockpit.cahayoyo.tech) — Docker on a VPS via Dokploy. `main` is production; `development` is the integration branch.
-
 ## Stack
 
 - [SvelteKit](https://svelte.dev/docs/kit) 2 + Svelte 5 (runes) on [Bun](https://bun.sh)
