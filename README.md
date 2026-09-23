@@ -55,7 +55,13 @@ bun run db:seed       # seed the dev accounts (refuses production)
 
 Production runs from `main` as a Docker container on a Sumopod VPS (Jakarta) via Dokploy; PostgreSQL is Neon-managed and media lives in a private Cloudflare R2 bucket. `development` batches features for the next release and never deploys.
 
-Every push to `main` builds `Dockerfile` in GitHub Actions and pushes it to `ghcr.io/cahayoyo/cahayoyo-cockpit` (tags: commit sha + `latest`), then calls the Dokploy deploy webhook. Repository secret:
+A release deploys by dispatching the workflow on `main` with the release version; it builds `Dockerfile` in GitHub Actions, pushes it to `ghcr.io/cahayoyo/cahayoyo-cockpit` (tags: commit sha + `latest`), then calls the Dokploy deploy webhook:
+
+```sh
+gh workflow run publish-image.yml --ref main -f version=v1.0.3
+```
+
+Repository secret:
 
 | Secret                   | Purpose                                                     |
 | ------------------------ | ----------------------------------------------------------- |
