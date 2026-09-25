@@ -1,6 +1,7 @@
 import { fail, type RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod';
 import { optionalId, requiredId, text } from './form-data';
+import { requireUserId } from './session';
 import { createTask, deleteTask, moveTaskProject, setTaskStatus, updateTask } from './tasks';
 import { taskFormSchema, taskStatusSchema } from './tasks-schemas';
 
@@ -10,7 +11,7 @@ const idSchema = z.uuid();
 // dialog (Tasks, Today): one implementation, same validation and messages —
 // the taskActions counterpart of folderActions.
 export const taskActions = {
-	saveTask: async ({ request }: RequestEvent) => {
+	saveTask: async ({ request, locals }: RequestEvent) => {
 		const formData = await request.formData();
 		const parsed = taskFormSchema.safeParse({
 			title: text(formData, 'title'),
@@ -26,11 +27,13 @@ export const taskActions = {
 			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid task.' });
 		}
 
+		const ownerId = requireUserId(locals);
+
 		// No id: the dialog is creating (task or subtask); the status stays
 		// server-owned and new tasks start in Backlog.
 		const id = text(formData, 'id');
 		if (id === '') {
-			const created = await createTask(parsed.data);
+			const created = await createTask(ownerId, parsed.data);
 			if (!created.ok) {
 				return fail(400, { message: created.error });
 			}
@@ -43,7 +46,7 @@ export const taskActions = {
 			return fail(400, { message: 'Invalid task.' });
 		}
 
-		const updated = await updateTask(parsedId.data, parsed.data);
+		const updated = await updateTask(ownerId, parsedId.data, parsed.data);
 		if (!updated.ok) {
 			return fail(400, { message: updated.error });
 		}

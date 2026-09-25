@@ -1,5 +1,8 @@
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { auth } from '$lib/server/auth';
+import { db } from '$lib/server/db';
+import { project, user } from '$lib/server/db/schema';
 
 // Dev-only credentials: set them in .env (never committed) — see .env.example.
 const seedEnvSchema = z.object({
@@ -13,7 +16,8 @@ const seedEnvSchema = z.object({
 // database moves; anything unrecognized is refused.
 const DEV_DB_HOSTS = [/^localhost$/, /^127\.0\.0\.1$/, /\.neon\.tech$/];
 
-// The test account must never exist in production (CONSTITUTION, single-tenant).
+// The test account must never exist in production (CONSTITUTION v2.0.0: test
+// accounts are seeded only in dev databases).
 function assertDevDatabase(): void {
 	if (process.env.NODE_ENV === 'production') {
 		throw new Error('Refusing to seed: NODE_ENV=production.');
@@ -49,7 +53,7 @@ async function upsertSeedUser(
 	email: string,
 	password: string,
 	name: string
-): Promise<'created' | 'updated'> {
+): Promise<{ id: string; action: 'created' | 'updated' }> {
 	const existing = await ctx.internalAdapter.findUserByEmail(email, { includeAccounts: true });
 	const passwordHash = await ctx.password.hash(password);
 
@@ -59,7 +63,7 @@ async function upsertSeedUser(
 			{ method: 'email-password' }
 		);
 		await createCredentialAccount(user.id, passwordHash);
-		return 'created';
+		return { id: user.id, action: 'created' };
 	}
 
 	await ctx.internalAdapter.updateUser(existing.user.id, { name, emailVerified: true });
@@ -71,10 +75,35 @@ async function upsertSeedUser(
 	} else {
 		await createCredentialAccount(existing.user.id, passwordHash);
 	}
-	return 'updated';
+	return { id: existing.user.id, action: 'updated' };
+}
+
+// Roles are written through the schema directly: the Better Auth admin plugin
+// (which owns the role field) lands with the admin server layer (#87).
+async function setRole(userId: string, role: 'admin' | 'user'): Promise<void> {
+	await db.update(user).set({ role }).where(eq(user.id, userId));
+}
+
+// One Inbox per account (ADR-0005). The super admin's seeded Inbox already
+// exists after the backfill; the test account gets a fresh one.
+async function ensureInbox(ownerId: string): Promise<void> {
+	const [existing] = await db
+		.select({ id: project.id })
+		.from(project)
+		.where(and(eq(project.ownerId, ownerId), eq(project.isInbox, true)))
+		.limit(1);
+	if (existing) {
+		return;
+	}
+	await db.insert(project).values({ ownerId, name: 'Inbox', isInbox: true });
 }
 
 const admin = await upsertSeedUser(env.SEED_ADMIN_EMAIL, env.SEED_ADMIN_PASSWORD, 'Admin');
-const test = await upsertSeedUser(env.SEED_TEST_EMAIL, env.SEED_TEST_PASSWORD, 'Test User');
+await setRole(admin.id, 'admin');
+await ensureInbox(admin.id);
 
-console.log(`seeded: admin account ${admin}, test account ${test}.`);
+const test = await upsertSeedUser(env.SEED_TEST_EMAIL, env.SEED_TEST_PASSWORD, 'Test User');
+await setRole(test.id, 'user');
+await ensureInbox(test.id);
+
+console.log(`seeded: admin account ${admin.action}, test account ${test.action}.`);

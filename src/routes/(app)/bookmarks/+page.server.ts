@@ -15,6 +15,7 @@ import { folderActions } from '$lib/server/folder-actions';
 import { optionalId, requiredId, text } from '$lib/server/form-data';
 import { listFolders } from '$lib/server/folders';
 import { deleteMedia, getMediaFile, listMedia } from '$lib/server/media';
+import { requireUserId } from '$lib/server/session';
 import { listTags } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
@@ -48,7 +49,7 @@ export const load: PageServerLoad = async ({ url }) => {
 export const actions: Actions = {
 	...folderActions,
 
-	saveBookmark: async ({ request }) => {
+	saveBookmark: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const parsed = bookmarkFormSchema.safeParse({
 			title: text(formData, 'title'),
@@ -75,7 +76,7 @@ export const actions: Actions = {
 
 		const id = text(formData, 'id');
 		if (id === '') {
-			await createBookmark(parsed.data);
+			await createBookmark(requireUserId(locals), parsed.data);
 			return { saved: true };
 		}
 
@@ -84,7 +85,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid bookmark.' });
 		}
 
-		const updated = await updateBookmark(parsedId.data, parsed.data);
+		const updated = await updateBookmark(requireUserId(locals), parsedId.data, parsed.data);
 		if (!updated) {
 			return fail(404, { message: 'This bookmark no longer exists.' });
 		}
