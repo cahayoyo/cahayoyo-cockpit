@@ -15,7 +15,8 @@
 		"test": "bun test",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "bun scripts/migrate.ts",
-		"db:seed": "bun scripts/seed-dev.ts"
+		"db:seed": "bun scripts/seed-dev.ts",
+		"db:backfill-owner": "bun scripts/backfill-owner.ts"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

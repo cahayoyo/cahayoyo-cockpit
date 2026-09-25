@@ -3,11 +3,12 @@ import { folderFormSchema } from '$lib/folders/schemas';
 import { optionalId, requiredId, text } from './form-data';
 import { createFolder, deleteFolder, renameFolder } from './folders';
 import { saveMedia } from './media';
+import { requireUserId } from './session';
 
 // Folder + media form actions are identical for every module that owns the shared
 // folder tree (Bookmarks, Notes): one implementation, same validation and messages.
 export const folderActions = {
-	createFolder: async ({ request }: RequestEvent) => {
+	createFolder: async ({ request, locals }: RequestEvent) => {
 		const formData = await request.formData();
 		const parsed = folderFormSchema.safeParse({
 			name: text(formData, 'name'),
@@ -18,7 +19,7 @@ export const folderActions = {
 			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid folder.' });
 		}
 
-		return { folderId: await createFolder(parsed.data) };
+		return { folderId: await createFolder(requireUserId(locals), parsed.data) };
 	},
 
 	renameFolder: async ({ request }: RequestEvent) => {
@@ -49,13 +50,13 @@ export const folderActions = {
 		return { deleted: true };
 	},
 
-	uploadMedia: async ({ request }: RequestEvent) => {
+	uploadMedia: async ({ request, locals }: RequestEvent) => {
 		const file = (await request.formData()).get('file');
 		if (!(file instanceof File)) {
 			return fail(400, { message: 'Choose an image to upload.' });
 		}
 
-		const saved = await saveMedia(file);
+		const saved = await saveMedia(requireUserId(locals), file);
 		if (!saved.ok) {
 			return fail(400, { message: saved.error });
 		}

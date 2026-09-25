@@ -3,6 +3,7 @@ import { dbIdSchema } from '$lib/ids';
 import { vaultFormSchema } from '$lib/vault/schemas';
 import { auth } from './auth';
 import { requiredId, text } from './form-data';
+import { requireUserId } from './session';
 import { createEntry, deleteEntry, revealEntry, updateEntry } from './vault';
 import { clearVaultUnlock, isVaultUnlocked, issueVaultUnlock } from './vault-unlock';
 
@@ -32,7 +33,7 @@ export const vaultActions = {
 		return { locked: true };
 	},
 
-	saveEntry: async ({ request, cookies }: RequestEvent) => {
+	saveEntry: async ({ request, cookies, locals }: RequestEvent) => {
 		// Create and edit put plaintext into a form, so they are gated too.
 		if (!isVaultUnlocked(cookies)) {
 			return fail(401, { message: LOCKED });
@@ -53,10 +54,12 @@ export const vaultActions = {
 			return fail(400, { message: parsed.error.issues[0]?.message ?? INVALID });
 		}
 
+		const ownerId = requireUserId(locals);
+
 		// No id: the dialog is creating; otherwise it edits that record.
 		const id = text(formData, 'id');
 		if (id === '') {
-			const created = await createEntry(parsed.data);
+			const created = await createEntry(ownerId, parsed.data);
 			if (!created.ok) {
 				return fail(400, { message: created.error });
 			}
@@ -70,7 +73,7 @@ export const vaultActions = {
 			return fail(400, { message: INVALID });
 		}
 
-		const updated = await updateEntry(parsedId.data, parsed.data);
+		const updated = await updateEntry(ownerId, parsedId.data, parsed.data);
 		if (!updated.ok) {
 			return fail(400, { message: updated.error });
 		}

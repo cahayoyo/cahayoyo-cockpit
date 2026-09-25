@@ -9,10 +9,10 @@ export async function listFolders(): Promise<FolderListItem[]> {
 	return db.select().from(folder).orderBy(asc(folder.name));
 }
 
-export async function createFolder(input: FolderFormInput): Promise<string> {
+export async function createFolder(ownerId: string, input: FolderFormInput): Promise<string> {
 	const [row] = await db
 		.insert(folder)
-		.values({ name: input.name, parentId: input.parentId })
+		.values({ name: input.name, parentId: input.parentId, ownerId })
 		.returning({ id: folder.id });
 
 	return row.id;

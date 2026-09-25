@@ -4,6 +4,7 @@ import { todayIso } from '$lib/tasks/today';
 import { taskActions } from '$lib/server/task-actions';
 import { text } from '$lib/server/form-data';
 import { INBOX_PROJECT_ID } from '$lib/ids';
+import { requireUserId } from '$lib/server/session';
 import { createTask, listProjects, listTasks } from '$lib/server/tasks';
 import { taskFormSchema } from '$lib/server/tasks-schemas';
 import { listTags } from '$lib/server/tags';
@@ -25,7 +26,7 @@ export const actions: Actions = {
 	...taskActions,
 
 	// Quick add: title only, straight to Inbox in Backlog, due today.
-	quickAdd: async ({ request }) => {
+	quickAdd: async ({ request, locals }) => {
 		const parsed = taskFormSchema.safeParse({
 			title: text(await request.formData(), 'title'),
 			description: '',
@@ -40,7 +41,7 @@ export const actions: Actions = {
 			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid task.' });
 		}
 
-		const created = await createTask(parsed.data);
+		const created = await createTask(requireUserId(locals), parsed.data);
 		if (!created.ok) {
 			return fail(400, { message: created.error });
 		}
