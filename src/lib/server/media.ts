@@ -115,8 +115,8 @@ export async function mediaUsageCount(id: string): Promise<number> {
 export async function deleteMedia(id: string): Promise<DeleteMediaResult> {
 	// The note half of this guard is a body scan, so the check and the delete
 	// are not atomic (there is deliberately no FK between note and media): a note
-	// saved in the gap could keep a dangling reference. Acceptable for a
-	// single-user workspace; a DB-level constraint is the fix if that changes.
+	// saved in the gap could keep a dangling reference. Acceptable at the current
+	// workspace scale; a DB-level constraint is the fix if that changes.
 	const [bookmarkCount, noteCounts] = await Promise.all([
 		bookmarkUsageCount(id),
 		noteUsageCounts()

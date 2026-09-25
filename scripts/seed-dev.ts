@@ -16,7 +16,8 @@ const seedEnvSchema = z.object({
 // database moves; anything unrecognized is refused.
 const DEV_DB_HOSTS = [/^localhost$/, /^127\.0\.0\.1$/, /\.neon\.tech$/];
 
-// The test account must never exist in production (CONSTITUTION, single-tenant).
+// The test account must never exist in production (CONSTITUTION v2.0.0: test
+// accounts are seeded only in dev databases).
 function assertDevDatabase(): void {
 	if (process.env.NODE_ENV === 'production') {
 		throw new Error('Refusing to seed: NODE_ENV=production.');
