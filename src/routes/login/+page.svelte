@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import Eye from '@lucide/svelte/icons/eye';
 	import EyeOff from '@lucide/svelte/icons/eye-off';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import Moon from '@lucide/svelte/icons/moon';
 	import Sun from '@lucide/svelte/icons/sun';
 	import { mode, toggleMode } from 'mode-watcher';
+	import FormAlert from '$lib/components/FormAlert.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -85,13 +85,7 @@
 			</div>
 
 			{#if form?.error}
-				<div
-					class="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3"
-					role="alert"
-				>
-					<CircleAlert class="size-4 shrink-0 text-destructive" />
-					<p class="text-sm text-destructive">{form.error}</p>
-				</div>
+				<FormAlert message={form.error} />
 			{/if}
 
 			<form
