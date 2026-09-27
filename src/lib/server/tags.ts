@@ -3,8 +3,13 @@ import type { Transaction } from './db';
 import { db } from './db';
 import { tag } from './db/schema';
 
-export async function listTags(): Promise<string[]> {
-	const rows = await db.select({ name: tag.name }).from(tag).orderBy(asc(tag.name));
+export async function listTags(ownerId: string): Promise<string[]> {
+	const rows = await db
+		.select({ name: tag.name })
+		.from(tag)
+		.where(eq(tag.ownerId, ownerId))
+		.orderBy(asc(tag.name));
+
 	return rows.map((row) => row.name);
 }
 

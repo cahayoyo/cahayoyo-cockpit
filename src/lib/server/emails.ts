@@ -1,4 +1,4 @@
-import { asc, desc, eq, isNotNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull } from 'drizzle-orm';
 import type { EmailFormInput } from '$lib/emails/schemas';
 import type { EmailStatus } from '$lib/emails/types';
 import { db } from './db';
@@ -7,21 +7,27 @@ import { disposableEmail, task } from './db/schema';
 export type EmailListItem = typeof disposableEmail.$inferSelect & { taskTitle: string | null };
 
 export type CreateResult = { ok: true; id: string } | { ok: false; error: string };
-export type WriteResult = { ok: true } | { ok: false; error: string };
+export type WriteResult =
+	{ ok: true } | { ok: false; reason: 'missing' | 'invalid'; error: string };
 
 /** Every recorded address with its linked task title (null when unlinked). */
-export async function listEmails(): Promise<EmailListItem[]> {
+export async function listEmails(ownerId: string): Promise<EmailListItem[]> {
 	const rows = await db
 		.select({ email: disposableEmail, taskTitle: task.title })
 		.from(disposableEmail)
-		.leftJoin(task, eq(disposableEmail.taskId, task.id))
+		.leftJoin(task, and(eq(disposableEmail.taskId, task.id), eq(task.ownerId, ownerId)))
+		.where(eq(disposableEmail.ownerId, ownerId))
 		.orderBy(desc(disposableEmail.createdAt));
 
 	return rows.map((row) => ({ ...row.email, taskTitle: row.taskTitle }));
 }
 
-async function taskExists(id: string): Promise<boolean> {
-	const [row] = await db.select({ id: task.id }).from(task).where(eq(task.id, id));
+async function taskExists(ownerId: string, id: string): Promise<boolean> {
+	const [row] = await db
+		.select({ id: task.id })
+		.from(task)
+		.where(and(eq(task.id, id), eq(task.ownerId, ownerId)));
+
 	return row !== undefined;
 }
 
@@ -37,7 +43,7 @@ function emailValues(input: EmailFormInput) {
 }
 
 export async function createEmail(ownerId: string, input: EmailFormInput): Promise<CreateResult> {
-	if (input.taskId !== null && !(await taskExists(input.taskId))) {
+	if (input.taskId !== null && !(await taskExists(ownerId, input.taskId))) {
 		return { ok: false, error: 'That task no longer exists.' };
 	}
 
@@ -49,44 +55,61 @@ export async function createEmail(ownerId: string, input: EmailFormInput): Promi
 	return { ok: true, id: row.id };
 }
 
-export async function updateEmail(id: string, input: EmailFormInput): Promise<WriteResult> {
+export async function updateEmail(
+	ownerId: string,
+	id: string,
+	input: EmailFormInput
+): Promise<WriteResult> {
 	const [current] = await db
 		.select({ id: disposableEmail.id })
 		.from(disposableEmail)
-		.where(eq(disposableEmail.id, id));
+		.where(and(eq(disposableEmail.id, id), eq(disposableEmail.ownerId, ownerId)));
 
 	if (!current) {
-		return { ok: false, error: 'This address no longer exists.' };
+		return { ok: false, reason: 'missing', error: 'This address no longer exists.' };
 	}
 
-	if (input.taskId !== null && !(await taskExists(input.taskId))) {
-		return { ok: false, error: 'That task no longer exists.' };
+	if (input.taskId !== null && !(await taskExists(ownerId, input.taskId))) {
+		return { ok: false, reason: 'invalid', error: 'That task no longer exists.' };
 	}
 
-	await db.update(disposableEmail).set(emailValues(input)).where(eq(disposableEmail.id, id));
+	await db
+		.update(disposableEmail)
+		.set(emailValues(input))
+		.where(and(eq(disposableEmail.id, id), eq(disposableEmail.ownerId, ownerId)));
+
 	return { ok: true };
 }
 
-export async function setEmailStatus(id: string, status: EmailStatus): Promise<boolean> {
+export async function setEmailStatus(
+	ownerId: string,
+	id: string,
+	status: EmailStatus
+): Promise<boolean> {
 	const [updated] = await db
 		.update(disposableEmail)
 		.set({ status })
-		.where(eq(disposableEmail.id, id))
+		.where(and(eq(disposableEmail.id, id), eq(disposableEmail.ownerId, ownerId)))
 		.returning({ id: disposableEmail.id });
 
 	return updated !== undefined;
 }
 
-export async function deleteEmail(id: string): Promise<void> {
-	await db.delete(disposableEmail).where(eq(disposableEmail.id, id));
+export async function deleteEmail(ownerId: string, id: string): Promise<boolean> {
+	const [deleted] = await db
+		.delete(disposableEmail)
+		.where(and(eq(disposableEmail.id, id), eq(disposableEmail.ownerId, ownerId)))
+		.returning({ id: disposableEmail.id });
+
+	return deleted !== undefined;
 }
 
 /** Distinct provider values already recorded, for the datalist and the filter. */
-export async function listEmailProviders(): Promise<string[]> {
+export async function listEmailProviders(ownerId: string): Promise<string[]> {
 	const rows = await db
 		.selectDistinct({ provider: disposableEmail.provider })
 		.from(disposableEmail)
-		.where(isNotNull(disposableEmail.provider))
+		.where(and(eq(disposableEmail.ownerId, ownerId), isNotNull(disposableEmail.provider)))
 		.orderBy(asc(disposableEmail.provider));
 
 	return rows

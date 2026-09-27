@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { BookmarkFormInput } from '$lib/bookmarks/schemas';
 import { groupTagNames } from '$lib/tags';
 import type { Transaction } from './db';
@@ -8,8 +8,13 @@ import { ensureTagIds } from './tags';
 
 export type BookmarkListItem = typeof bookmark.$inferSelect & { tags: string[] };
 
-export async function listBookmarks(): Promise<BookmarkListItem[]> {
-	const rows = await db.select().from(bookmark).orderBy(asc(bookmark.createdAt));
+export async function listBookmarks(ownerId: string): Promise<BookmarkListItem[]> {
+	const rows = await db
+		.select()
+		.from(bookmark)
+		.where(eq(bookmark.ownerId, ownerId))
+		.orderBy(asc(bookmark.createdAt));
+
 	if (rows.length === 0) {
 		return [];
 	}
@@ -18,6 +23,12 @@ export async function listBookmarks(): Promise<BookmarkListItem[]> {
 		.select({ id: bookmarkTag.bookmarkId, name: tag.name })
 		.from(bookmarkTag)
 		.innerJoin(tag, eq(bookmarkTag.tagId, tag.id))
+		.where(
+			inArray(
+				bookmarkTag.bookmarkId,
+				rows.map((row) => row.id)
+			)
+		)
 		.orderBy(asc(tag.name));
 
 	const tagsByBookmark = groupTagNames(links);
@@ -71,7 +82,7 @@ export async function updateBookmark(
 		const updated = await tx
 			.update(bookmark)
 			.set(bookmarkValues(input))
-			.where(eq(bookmark.id, id))
+			.where(and(eq(bookmark.id, id), eq(bookmark.ownerId, ownerId)))
 			.returning({ id: bookmark.id });
 
 		if (updated.length === 0) {
@@ -84,10 +95,25 @@ export async function updateBookmark(
 	});
 }
 
-export async function deleteBookmark(id: string): Promise<void> {
-	await db.delete(bookmark).where(eq(bookmark.id, id));
+export async function deleteBookmark(ownerId: string, id: string): Promise<boolean> {
+	const [deleted] = await db
+		.delete(bookmark)
+		.where(and(eq(bookmark.id, id), eq(bookmark.ownerId, ownerId)))
+		.returning({ id: bookmark.id });
+
+	return deleted !== undefined;
 }
 
-export async function setBookmarkFavorite(id: string, favorite: boolean): Promise<void> {
-	await db.update(bookmark).set({ favorite }).where(eq(bookmark.id, id));
+export async function setBookmarkFavorite(
+	ownerId: string,
+	id: string,
+	favorite: boolean
+): Promise<boolean> {
+	const [updated] = await db
+		.update(bookmark)
+		.set({ favorite })
+		.where(and(eq(bookmark.id, id), eq(bookmark.ownerId, ownerId)))
+		.returning({ id: bookmark.id });
+
+	return updated !== undefined;
 }

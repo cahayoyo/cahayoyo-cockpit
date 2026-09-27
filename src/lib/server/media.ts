@@ -1,5 +1,5 @@
 import { S3Client } from 'bun';
-import { count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import { mediaUploadSchema } from '$lib/bookmarks/schemas';
 import { mediaObjectKey, type UploadMimeType } from '$lib/bookmarks/upload';
 import { extractMediaIds } from '$lib/notes/media-refs';
@@ -24,7 +24,9 @@ export type MediaWithUsage = MediaRow & { usageCount: number };
 
 export type SaveMediaResult = { ok: true; media: MediaRow } | { ok: false; error: string };
 export type DeleteMediaResult =
-	{ ok: true } | { ok: false; bookmarkCount: number; noteCount: number };
+	| { ok: true }
+	| { ok: false; reason: 'missing' }
+	| { ok: false; reason: 'in-use'; bookmarkCount: number; noteCount: number };
 
 export async function saveMedia(ownerId: string, file: File): Promise<SaveMediaResult> {
 	const parsed = mediaUploadSchema.safeParse(file);
@@ -57,19 +59,19 @@ export async function saveMedia(ownerId: string, file: File): Promise<SaveMediaR
 	}
 }
 
-async function bookmarkUsageCount(id: string): Promise<number> {
+async function bookmarkUsageCount(ownerId: string, id: string): Promise<number> {
 	const [row] = await db
 		.select({ usageCount: count() })
 		.from(bookmark)
-		.where(eq(bookmark.imageId, id));
+		.where(and(eq(bookmark.imageId, id), eq(bookmark.ownerId, ownerId)));
 
 	return row?.usageCount ?? 0;
 }
 
 // Notes have no FK to media: usage is computed by scanning every note body for
 // the `/media/<id>` reference. Cost is bounded by the number of notes.
-async function noteUsageCounts(): Promise<Map<string, number>> {
-	const rows = await db.select({ body: note.body }).from(note);
+async function noteUsageCounts(ownerId: string): Promise<Map<string, number>> {
+	const rows = await db.select({ body: note.body }).from(note).where(eq(note.ownerId, ownerId));
 	const counts = new Map<string, number>();
 
 	for (const row of rows) {
@@ -81,7 +83,7 @@ async function noteUsageCounts(): Promise<Map<string, number>> {
 	return counts;
 }
 
-export async function listMedia(): Promise<MediaWithUsage[]> {
+export async function listMedia(ownerId: string): Promise<MediaWithUsage[]> {
 	const [rows, noteCounts] = await Promise.all([
 		db
 			.select({
@@ -95,10 +97,11 @@ export async function listMedia(): Promise<MediaWithUsage[]> {
 				usageCount: count(bookmark.id)
 			})
 			.from(media)
-			.leftJoin(bookmark, eq(bookmark.imageId, media.id))
+			.leftJoin(bookmark, and(eq(bookmark.imageId, media.id), eq(bookmark.ownerId, ownerId)))
+			.where(eq(media.ownerId, ownerId))
 			.groupBy(media.id)
 			.orderBy(desc(media.createdAt)),
-		noteUsageCounts()
+		noteUsageCounts(ownerId)
 	]);
 
 	return rows.map((row) => ({
@@ -107,37 +110,49 @@ export async function listMedia(): Promise<MediaWithUsage[]> {
 	}));
 }
 
-export async function mediaUsageCount(id: string): Promise<number> {
-	const [bookmarks, notes] = await Promise.all([bookmarkUsageCount(id), noteUsageCounts()]);
+export async function mediaUsageCount(ownerId: string, id: string): Promise<number> {
+	const [bookmarks, notes] = await Promise.all([
+		bookmarkUsageCount(ownerId, id),
+		noteUsageCounts(ownerId)
+	]);
 	return bookmarks + (notes.get(id) ?? 0);
 }
 
-export async function deleteMedia(id: string): Promise<DeleteMediaResult> {
+export async function deleteMedia(ownerId: string, id: string): Promise<DeleteMediaResult> {
 	// The note half of this guard is a body scan, so the check and the delete
 	// are not atomic (there is deliberately no FK between note and media): a note
 	// saved in the gap could keep a dangling reference. Acceptable at the current
 	// workspace scale; a DB-level constraint is the fix if that changes.
 	const [bookmarkCount, noteCounts] = await Promise.all([
-		bookmarkUsageCount(id),
-		noteUsageCounts()
+		bookmarkUsageCount(ownerId, id),
+		noteUsageCounts(ownerId)
 	]);
 	const noteCount = noteCounts.get(id) ?? 0;
 	if (bookmarkCount > 0 || noteCount > 0) {
-		return { ok: false, bookmarkCount, noteCount };
+		return { ok: false, reason: 'in-use', bookmarkCount, noteCount };
 	}
 
-	const [row] = await db.delete(media).where(eq(media.id, id)).returning();
-	if (row) {
-		await s3.file(row.storagePath).delete();
+	const [row] = await db
+		.delete(media)
+		.where(and(eq(media.id, id), eq(media.ownerId, ownerId)))
+		.returning();
+	if (!row) {
+		return { ok: false, reason: 'missing' };
 	}
 
+	await s3.file(row.storagePath).delete();
 	return { ok: true };
 }
 
 export async function getMediaFile(
+	ownerId: string,
 	id: string
 ): Promise<{ body: ReadableStream<Uint8Array>; mimeType: string } | null> {
-	const [row] = await db.select().from(media).where(eq(media.id, id));
+	const [row] = await db
+		.select()
+		.from(media)
+		.where(and(eq(media.id, id), eq(media.ownerId, ownerId)));
+
 	if (!row) {
 		return null;
 	}
