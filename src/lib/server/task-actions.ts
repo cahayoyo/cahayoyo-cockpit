@@ -54,7 +54,7 @@ export const taskActions = {
 		return { saved: true, taskId: parsedId.data };
 	},
 
-	setTaskStatus: async ({ request }: RequestEvent) => {
+	setTaskStatus: async ({ request, locals }: RequestEvent) => {
 		const formData = await request.formData();
 		const id = requiredId(formData);
 		const status = taskStatusSchema.safeParse(text(formData, 'status'));
@@ -62,14 +62,14 @@ export const taskActions = {
 			return fail(400, { message: 'Invalid task.' });
 		}
 
-		if (!(await setTaskStatus(id, status.data))) {
+		if (!(await setTaskStatus(requireUserId(locals), id, status.data))) {
 			return fail(404, { message: 'This task no longer exists.' });
 		}
 
 		return { moved: true };
 	},
 
-	moveTaskProject: async ({ request }: RequestEvent) => {
+	moveTaskProject: async ({ request, locals }: RequestEvent) => {
 		const formData = await request.formData();
 		const id = requiredId(formData);
 		const projectId = requiredId(formData, 'projectId');
@@ -77,7 +77,7 @@ export const taskActions = {
 			return fail(400, { message: 'Invalid task.' });
 		}
 
-		const moved = await moveTaskProject(id, projectId);
+		const moved = await moveTaskProject(requireUserId(locals), id, projectId);
 		if (!moved.ok) {
 			return fail(400, { message: moved.error });
 		}
@@ -85,13 +85,16 @@ export const taskActions = {
 		return { moved: true };
 	},
 
-	deleteTask: async ({ request }: RequestEvent) => {
+	deleteTask: async ({ request, locals }: RequestEvent) => {
 		const id = requiredId(await request.formData());
 		if (!id) {
 			return fail(400, { message: 'Invalid task.' });
 		}
 
-		await deleteTask(id);
+		if (!(await deleteTask(requireUserId(locals), id))) {
+			return fail(404, { message: 'This task no longer exists.' });
+		}
+
 		return { deleted: true };
 	}
 };

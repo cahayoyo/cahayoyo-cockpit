@@ -1,5 +1,4 @@
-import { asc, count, eq, inArray } from 'drizzle-orm';
-import { INBOX_PROJECT_ID } from '$lib/ids';
+import { and, asc, count, eq, inArray } from 'drizzle-orm';
 import {
 	filterTasks,
 	normalizePriorityFilter,
@@ -54,8 +53,8 @@ async function withTags(rows: (typeof task.$inferSelect)[]): Promise<TaskListIte
  * Tasks matching the filters, sorted, each with its tag names. Subtasks are
  * included (any level): the UI decides where they belong.
  */
-export async function listTasks(filters: TaskFilters): Promise<TaskListItem[]> {
-	const items = await withTags(await db.select().from(task));
+export async function listTasks(ownerId: string, filters: TaskFilters): Promise<TaskListItem[]> {
+	const items = await withTags(await db.select().from(task).where(eq(task.ownerId, ownerId)));
 	// Status and priority values are validated against the schema enums; unknown
 	// URL values degrade to the defaults instead of matching nothing.
 	const scope: TaskFilters = {
@@ -67,8 +66,12 @@ export async function listTasks(filters: TaskFilters): Promise<TaskListItem[]> {
 	return sortTasks(filterTasks(items, scope, todayIso()), scope.sort, taskPriority.enumValues);
 }
 
-export async function getTask(id: string): Promise<TaskListItem | null> {
-	const [row] = await db.select().from(task).where(eq(task.id, id));
+export async function getTask(ownerId: string, id: string): Promise<TaskListItem | null> {
+	const [row] = await db
+		.select()
+		.from(task)
+		.where(and(eq(task.id, id), eq(task.ownerId, ownerId)));
+
 	if (!row) {
 		return null;
 	}
@@ -76,22 +79,30 @@ export async function getTask(id: string): Promise<TaskListItem | null> {
 	return { ...row, tags: (await tagsByTaskId([id])).get(id) ?? [] };
 }
 
-async function projectExists(id: string): Promise<boolean> {
-	const [row] = await db.select({ id: project.id }).from(project).where(eq(project.id, id));
+async function projectExists(ownerId: string, id: string): Promise<boolean> {
+	const [row] = await db
+		.select({ id: project.id })
+		.from(project)
+		.where(and(eq(project.id, id), eq(project.ownerId, ownerId)));
+
 	return row !== undefined;
 }
 
-async function parentCandidate(id: string): Promise<ParentCandidate | null> {
+async function parentCandidate(ownerId: string, id: string): Promise<ParentCandidate | null> {
 	const [row] = await db
 		.select({ id: task.id, parentId: task.parentId })
 		.from(task)
-		.where(eq(task.id, id));
+		.where(and(eq(task.id, id), eq(task.ownerId, ownerId)));
 
 	return row ?? null;
 }
 
-async function hasSubtasks(id: string): Promise<boolean> {
-	const [row] = await db.select({ id: task.id }).from(task).where(eq(task.parentId, id)).limit(1);
+async function hasSubtasks(ownerId: string, id: string): Promise<boolean> {
+	const [row] = await db
+		.select({ id: task.id })
+		.from(task)
+		.where(and(eq(task.parentId, id), eq(task.ownerId, ownerId)))
+		.limit(1);
 
 	return row !== undefined;
 }
@@ -100,8 +111,12 @@ async function hasSubtasks(id: string): Promise<boolean> {
  * One-level subtask guard for create (taskId null) and update alike. Returns a
  * user-facing error, or null when the assignment is allowed.
  */
-async function checkParent(taskId: string | null, parentId: string): Promise<string | null> {
-	const parent = await parentCandidate(parentId);
+async function checkParent(
+	ownerId: string,
+	taskId: string | null,
+	parentId: string
+): Promise<string | null> {
+	const parent = await parentCandidate(ownerId, parentId);
 	if (!parent) {
 		return 'That parent task no longer exists.';
 	}
@@ -141,12 +156,12 @@ function taskValues(input: TaskFormInput) {
 }
 
 export async function createTask(ownerId: string, input: TaskFormInput): Promise<CreateResult> {
-	if (!(await projectExists(input.projectId))) {
+	if (!(await projectExists(ownerId, input.projectId))) {
 		return { ok: false, error: 'That project no longer exists.' };
 	}
 
 	if (input.parentId !== null) {
-		const error = await checkParent(null, input.parentId);
+		const error = await checkParent(ownerId, null, input.parentId);
 		if (error) {
 			return { ok: false, error };
 		}
@@ -170,22 +185,26 @@ export async function updateTask(
 	id: string,
 	input: TaskFormInput
 ): Promise<WriteResult> {
-	const [current] = await db.select({ id: task.id }).from(task).where(eq(task.id, id));
+	const [current] = await db
+		.select({ id: task.id })
+		.from(task)
+		.where(and(eq(task.id, id), eq(task.ownerId, ownerId)));
+
 	if (!current) {
 		return { ok: false, error: 'This task no longer exists.' };
 	}
 
-	if (!(await projectExists(input.projectId))) {
+	if (!(await projectExists(ownerId, input.projectId))) {
 		return { ok: false, error: 'That project no longer exists.' };
 	}
 
 	if (input.parentId !== null) {
-		const error = await checkParent(id, input.parentId);
+		const error = await checkParent(ownerId, id, input.parentId);
 		if (error) {
 			return { ok: false, error };
 		}
 
-		if (await hasSubtasks(id)) {
+		if (await hasSubtasks(ownerId, id)) {
 			return { ok: false, error: 'This task has subtasks, so it cannot become a subtask.' };
 		}
 	}
@@ -200,11 +219,15 @@ export async function updateTask(
 }
 
 // The single writer of completed_at: entering Done stamps it, leaving clears it.
-export async function setTaskStatus(id: string, status: TaskStatus): Promise<boolean> {
+export async function setTaskStatus(
+	ownerId: string,
+	id: string,
+	status: TaskStatus
+): Promise<boolean> {
 	const [current] = await db
 		.select({ status: task.status, completedAt: task.completedAt })
 		.from(task)
-		.where(eq(task.id, id));
+		.where(and(eq(task.id, id), eq(task.ownerId, ownerId)));
 
 	if (!current) {
 		return false;
@@ -221,15 +244,19 @@ export async function setTaskStatus(id: string, status: TaskStatus): Promise<boo
 	return true;
 }
 
-export async function moveTaskProject(id: string, projectId: string): Promise<WriteResult> {
-	if (!(await projectExists(projectId))) {
+export async function moveTaskProject(
+	ownerId: string,
+	id: string,
+	projectId: string
+): Promise<WriteResult> {
+	if (!(await projectExists(ownerId, projectId))) {
 		return { ok: false, error: 'That project no longer exists.' };
 	}
 
 	const [updated] = await db
 		.update(task)
 		.set({ projectId })
-		.where(eq(task.id, id))
+		.where(and(eq(task.id, id), eq(task.ownerId, ownerId)))
 		.returning({ id: task.id });
 
 	if (!updated) {
@@ -239,23 +266,42 @@ export async function moveTaskProject(id: string, projectId: string): Promise<Wr
 	return { ok: true };
 }
 
-export async function deleteTask(id: string): Promise<void> {
+export async function deleteTask(ownerId: string, id: string): Promise<boolean> {
 	// Subtasks go with the parent via task.parent_id ON DELETE CASCADE.
-	await db.delete(task).where(eq(task.id, id));
+	const [deleted] = await db
+		.delete(task)
+		.where(and(eq(task.id, id), eq(task.ownerId, ownerId)))
+		.returning({ id: task.id });
+
+	return deleted !== undefined;
 }
 
-export async function listProjects(): Promise<ProjectListItem[]> {
+export async function listProjects(ownerId: string): Promise<ProjectListItem[]> {
 	const [rows, counts] = await Promise.all([
-		db.select().from(project).orderBy(asc(project.createdAt)),
-		db.select({ projectId: task.projectId, value: count() }).from(task).groupBy(task.projectId)
+		db.select().from(project).where(eq(project.ownerId, ownerId)).orderBy(asc(project.createdAt)),
+		db
+			.select({ projectId: task.projectId, value: count() })
+			.from(task)
+			.where(eq(task.ownerId, ownerId))
+			.groupBy(task.projectId)
 	]);
 	const countByProject = new Map(counts.map((row) => [row.projectId, row.value]));
 
 	return rows.map((row) => ({
 		...row,
 		taskCount: countByProject.get(row.id) ?? 0,
-		isInbox: row.id === INBOX_PROJECT_ID
+		isInbox: row.isInbox
 	}));
+}
+
+/** The signed-in account's Inbox project id (each account has exactly one). */
+export async function getInboxProjectId(ownerId: string): Promise<string | null> {
+	const [row] = await db
+		.select({ id: project.id })
+		.from(project)
+		.where(and(eq(project.ownerId, ownerId), eq(project.isInbox, true)));
+
+	return row?.id ?? null;
 }
 
 export async function createProject(ownerId: string, name: string): Promise<string> {
@@ -263,27 +309,35 @@ export async function createProject(ownerId: string, name: string): Promise<stri
 	return row.id;
 }
 
-export async function renameProject(id: string, name: string): Promise<boolean> {
+export async function renameProject(ownerId: string, id: string, name: string): Promise<boolean> {
 	const [updated] = await db
 		.update(project)
 		.set({ name })
-		.where(eq(project.id, id))
+		.where(and(eq(project.id, id), eq(project.ownerId, ownerId)))
 		.returning({ id: project.id });
 
 	return updated !== undefined;
 }
 
-export async function deleteProject(id: string): Promise<WriteResult> {
-	if (id === INBOX_PROJECT_ID) {
-		return { ok: false, error: 'The Inbox project cannot be deleted.' };
-	}
+export async function deleteProject(ownerId: string, id: string): Promise<WriteResult> {
+	const [row] = await db
+		.select({ id: project.id, isInbox: project.isInbox })
+		.from(project)
+		.where(and(eq(project.id, id), eq(project.ownerId, ownerId)));
 
-	const [row] = await db.select({ id: project.id }).from(project).where(eq(project.id, id));
 	if (!row) {
 		return { ok: false, error: 'This project no longer exists.' };
 	}
 
-	const [tasks] = await db.select({ value: count() }).from(task).where(eq(task.projectId, id));
+	if (row.isInbox) {
+		return { ok: false, error: 'The Inbox project cannot be deleted.' };
+	}
+
+	const [tasks] = await db
+		.select({ value: count() })
+		.from(task)
+		.where(and(eq(task.projectId, id), eq(task.ownerId, ownerId)));
+
 	if (tasks.value > 0) {
 		return {
 			ok: false,
@@ -291,6 +345,6 @@ export async function deleteProject(id: string): Promise<WriteResult> {
 		};
 	}
 
-	await db.delete(project).where(eq(project.id, id));
+	await db.delete(project).where(and(eq(project.id, id), eq(project.ownerId, ownerId)));
 	return { ok: true };
 }

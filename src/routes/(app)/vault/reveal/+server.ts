@@ -1,15 +1,17 @@
 import { json } from '@sveltejs/kit';
 import { dbIdSchema } from '$lib/ids';
+import { requireUserId } from '$lib/server/session';
 import { revealEntry } from '$lib/server/vault';
 import { isVaultUnlocked, issueVaultUnlock } from '$lib/server/vault-unlock';
 import type { RequestHandler } from './$types.js';
 
 // Reveal transport: POST-only JSON, never cached, so plaintext stays out of load
 // data, the SSR payload, and any cache (grill decisions + architect default).
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, locals }) => {
 	const headers = { 'cache-control': 'no-store' };
+	const ownerId = requireUserId(locals);
 
-	if (!isVaultUnlocked(cookies)) {
+	if (!isVaultUnlocked(cookies, ownerId)) {
 		return json(
 			{ ok: false, reason: 'locked', message: 'Vault is locked.' },
 			{ status: 401, headers }
@@ -25,7 +27,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		);
 	}
 
-	const revealed = await revealEntry(parsedId.data);
+	const revealed = await revealEntry(ownerId, parsedId.data);
 	if (!revealed.ok) {
 		return json(
 			{ ok: false, reason: revealed.reason, message: revealed.error },
@@ -34,6 +36,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 	}
 
 	// A reveal is a vault action: it slides the 15-minute idle window.
-	issueVaultUnlock(cookies);
+	issueVaultUnlock(cookies, ownerId);
 	return json({ ok: true, secret: revealed.secret, notes: revealed.notes }, { headers });
 };

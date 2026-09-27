@@ -13,7 +13,7 @@ import {
 } from '$lib/server/bookmarks';
 import { folderActions } from '$lib/server/folder-actions';
 import { optionalId, requiredId, text } from '$lib/server/form-data';
-import { listFolders } from '$lib/server/folders';
+import { folderExists, listFolders } from '$lib/server/folders';
 import { deleteMedia, getMediaFile, listMedia } from '$lib/server/media';
 import { requireUserId } from '$lib/server/session';
 import { listTags } from '$lib/server/tags';
@@ -22,13 +22,14 @@ import type { Actions, PageServerLoad } from './$types.js';
 const idSchema = z.uuid();
 const favoriteSchema = z.enum(['true', 'false']);
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, locals }) => {
+	const ownerId = requireUserId(locals);
 	const filters = parseBookmarkSearch(url.searchParams);
 	const [bookmarks, folders, tags, media] = await Promise.all([
-		listBookmarks(),
-		listFolders(),
-		listTags(),
-		listMedia()
+		listBookmarks(ownerId),
+		listFolders(ownerId),
+		listTags(ownerId),
+		listMedia(ownerId)
 	]);
 
 	// A folder that no longer exists (deleted elsewhere, stale link) degrades to the root.
@@ -50,6 +51,7 @@ export const actions: Actions = {
 	...folderActions,
 
 	saveBookmark: async ({ request, locals }) => {
+		const ownerId = requireUserId(locals);
 		const formData = await request.formData();
 		const parsed = bookmarkFormSchema.safeParse({
 			title: text(formData, 'title'),
@@ -65,10 +67,15 @@ export const actions: Actions = {
 			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid bookmark.' });
 		}
 
+		// Folders and images from another account must be rejected as missing.
+		if (parsed.data.folderId && !(await folderExists(ownerId, parsed.data.folderId))) {
+			return fail(400, { message: 'That folder no longer exists. Pick another one.' });
+		}
+
 		// The picker can delete an unreferenced image the draft still points at; the
 		// media FK would reject the insert, so check before writing.
 		if (parsed.data.imageId) {
-			const file = await getMediaFile(parsed.data.imageId);
+			const file = await getMediaFile(ownerId, parsed.data.imageId);
 			if (!file) {
 				return fail(400, { message: 'That image no longer exists. Pick another one.' });
 			}
@@ -76,7 +83,7 @@ export const actions: Actions = {
 
 		const id = text(formData, 'id');
 		if (id === '') {
-			await createBookmark(requireUserId(locals), parsed.data);
+			await createBookmark(ownerId, parsed.data);
 			return { saved: true };
 		}
 
@@ -85,7 +92,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid bookmark.' });
 		}
 
-		const updated = await updateBookmark(requireUserId(locals), parsedId.data, parsed.data);
+		const updated = await updateBookmark(ownerId, parsedId.data, parsed.data);
 		if (!updated) {
 			return fail(404, { message: 'This bookmark no longer exists.' });
 		}
@@ -93,17 +100,20 @@ export const actions: Actions = {
 		return { saved: true };
 	},
 
-	deleteBookmark: async ({ request }) => {
+	deleteBookmark: async ({ request, locals }) => {
 		const id = requiredId(await request.formData());
 		if (!id) {
 			return fail(400, { message: 'Invalid bookmark.' });
 		}
 
-		await deleteBookmark(id);
+		if (!(await deleteBookmark(requireUserId(locals), id))) {
+			return fail(404, { message: 'This bookmark no longer exists.' });
+		}
+
 		return { deleted: true };
 	},
 
-	toggleFavorite: async ({ request }) => {
+	toggleFavorite: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const id = requiredId(formData);
 		const favorite = favoriteSchema.safeParse(text(formData, 'favorite'));
@@ -111,18 +121,25 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid bookmark.' });
 		}
 
-		await setBookmarkFavorite(id, favorite.data === 'true');
+		if (!(await setBookmarkFavorite(requireUserId(locals), id, favorite.data === 'true'))) {
+			return fail(404, { message: 'This bookmark no longer exists.' });
+		}
+
 		return { toggled: true };
 	},
 
-	deleteMedia: async ({ request }) => {
+	deleteMedia: async ({ request, locals }) => {
 		const id = requiredId(await request.formData());
 		if (!id) {
 			return fail(400, { message: 'Invalid image.' });
 		}
 
-		const result = await deleteMedia(id);
+		const result = await deleteMedia(requireUserId(locals), id);
 		if (!result.ok) {
+			if (result.reason === 'missing') {
+				return fail(404, { message: 'This image no longer exists.' });
+			}
+
 			const usedBy = [
 				result.bookmarkCount > 0
 					? `${result.bookmarkCount} bookmark${result.bookmarkCount === 1 ? '' : 's'}`

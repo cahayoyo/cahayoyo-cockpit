@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import { groupTagNames } from '$lib/tags';
 import type { VaultFormInput } from '$lib/vault/schemas';
 import type { VaultEntryItem } from '$lib/vault/types';
@@ -20,7 +20,7 @@ export type RevealResult =
 const vaultKey = Buffer.from(envSchema.parse(process.env).VAULT_ENCRYPTION_KEY, 'base64');
 
 /** Every entry's metadata plus its tag names — never the encrypted columns. */
-export async function listVaultEntries(): Promise<VaultEntryItem[]> {
+export async function listVaultEntries(ownerId: string): Promise<VaultEntryItem[]> {
 	const rows = await db
 		.select({
 			id: vaultEntry.id,
@@ -31,6 +31,7 @@ export async function listVaultEntries(): Promise<VaultEntryItem[]> {
 			updatedAt: vaultEntry.updatedAt
 		})
 		.from(vaultEntry)
+		.where(eq(vaultEntry.ownerId, ownerId))
 		.orderBy(desc(vaultEntry.updatedAt));
 
 	if (rows.length === 0) {
@@ -105,7 +106,7 @@ export async function updateEntry(
 		const updated = await tx
 			.update(vaultEntry)
 			.set(entryValues(input, key))
-			.where(eq(vaultEntry.id, id))
+			.where(and(eq(vaultEntry.id, id), eq(vaultEntry.ownerId, ownerId)))
 			.returning({ id: vaultEntry.id });
 
 		if (updated.length === 0) {
@@ -118,20 +119,25 @@ export async function updateEntry(
 	});
 }
 
-export async function deleteEntry(id: string): Promise<void> {
+export async function deleteEntry(ownerId: string, id: string): Promise<boolean> {
 	// vault_entry_tag rows go with the entry via ON DELETE CASCADE.
-	await db.delete(vaultEntry).where(eq(vaultEntry.id, id));
+	const [deleted] = await db
+		.delete(vaultEntry)
+		.where(and(eq(vaultEntry.id, id), eq(vaultEntry.ownerId, ownerId)))
+		.returning({ id: vaultEntry.id });
+
+	return deleted !== undefined;
 }
 
 /**
  * Decrypts on demand: the only path that reads plaintext. A missing row and an
  * undecryptable payload are distinguishable, and neither leaks key material.
  */
-export async function revealEntry(id: string): Promise<RevealResult> {
+export async function revealEntry(ownerId: string, id: string): Promise<RevealResult> {
 	const [row] = await db
 		.select({ secretValue: vaultEntry.secretValue, notes: vaultEntry.notes })
 		.from(vaultEntry)
-		.where(eq(vaultEntry.id, id));
+		.where(and(eq(vaultEntry.id, id), eq(vaultEntry.ownerId, ownerId)));
 
 	if (!row) {
 		return { ok: false, reason: 'missing', error: 'This entry no longer exists.' };

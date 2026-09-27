@@ -19,10 +19,15 @@ export const folderActions = {
 			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid folder.' });
 		}
 
-		return { folderId: await createFolder(requireUserId(locals), parsed.data) };
+		const folderId = await createFolder(requireUserId(locals), parsed.data);
+		if (!folderId) {
+			return fail(400, { message: 'That folder no longer exists. Pick another one.' });
+		}
+
+		return { folderId };
 	},
 
-	renameFolder: async ({ request }: RequestEvent) => {
+	renameFolder: async ({ request, locals }: RequestEvent) => {
 		const formData = await request.formData();
 		const parsed = folderFormSchema
 			.pick({ name: true })
@@ -36,17 +41,23 @@ export const folderActions = {
 			return fail(400, { message: 'Invalid folder.' });
 		}
 
-		await renameFolder(id, parsed.data.name);
+		if (!(await renameFolder(requireUserId(locals), id, parsed.data.name))) {
+			return fail(404, { message: 'This folder no longer exists.' });
+		}
+
 		return { renamed: true };
 	},
 
-	deleteFolder: async ({ request }: RequestEvent) => {
+	deleteFolder: async ({ request, locals }: RequestEvent) => {
 		const id = requiredId(await request.formData());
 		if (!id) {
 			return fail(400, { message: 'Invalid folder.' });
 		}
 
-		await deleteFolder(id);
+		if (!(await deleteFolder(requireUserId(locals), id))) {
+			return fail(404, { message: 'This folder no longer exists.' });
+		}
+
 		return { deleted: true };
 	},
 

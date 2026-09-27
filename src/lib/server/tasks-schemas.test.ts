@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { INBOX_PROJECT_ID } from '$lib/ids';
 import { projectNameSchema, taskFormSchema } from './tasks-schemas';
 
 const PROJECT_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
+// The seeded Inbox project id (version 0): not a valid RFC 9562 UUID.
+const SEEDED_ID = '00000000-0000-0000-0000-000000000001';
 
 const valid = {
 	title: '  Fix login regression  ',
@@ -38,9 +39,9 @@ describe('taskFormSchema', () => {
 	});
 
 	test('accepts the seeded Inbox id (not an RFC 9562 UUID)', () => {
-		const parsed = taskFormSchema.safeParse({ ...valid, projectId: INBOX_PROJECT_ID });
+		const parsed = taskFormSchema.safeParse({ ...valid, projectId: SEEDED_ID });
 		expect(parsed.success).toBe(true);
-		expect(taskFormSchema.safeParse({ ...valid, parentId: INBOX_PROJECT_ID }).success).toBe(true);
+		expect(taskFormSchema.safeParse({ ...valid, parentId: SEEDED_ID }).success).toBe(true);
 	});
 });
 
