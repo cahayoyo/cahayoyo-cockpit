@@ -10,6 +10,7 @@
 	import { mode, toggleMode } from 'mode-watcher';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import { cn } from '$lib/utils.js';
 	import { formatClock } from './clock.js';
 
 	let {
@@ -95,12 +96,13 @@
 			aria-checked={isDark}
 			aria-label="Toggle dark mode"
 			onclick={toggleMode}
-			class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border bg-muted px-0.5 transition-colors before:absolute before:inset-x-0 before:-inset-y-2.5 before:content-[''] motion-reduce:transition-none"
+			class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border bg-muted px-0.5 transition-colors before:absolute before:inset-x-0 before:-inset-y-2.5 before:content-[''] hover:border-ring/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
 		>
 			<span
-				class="size-5 rounded-full bg-background shadow-sm transition-transform duration-200 ease-standard motion-reduce:transition-none {isDark
-					? 'translate-x-5'
-					: ''}"
+				class={cn(
+					'size-5 rounded-full bg-background shadow-sm transition-transform duration-200 ease-standard motion-reduce:transition-none',
+					isDark && 'translate-x-5'
+				)}
 			></span>
 		</button>
 		<Moon class="size-4 text-muted-foreground" />
