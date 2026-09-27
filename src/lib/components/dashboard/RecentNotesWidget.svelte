@@ -3,11 +3,9 @@
 	// (selection happens in $lib/dashboard/select). Rows deep-link to /notes?note=<id>.
 	import NotebookPen from '@lucide/svelte/icons/notebook-pen';
 	import { resolve } from '$app/paths';
+	import NoteRowContent from '$lib/components/notes/NoteRowContent.svelte';
 	import type { NoteItem } from '$lib/components/notes/types.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { formatRelativeTime } from '$lib/notes/format.js';
-	import { tagBadgeClass } from '$lib/notes/tag-badges.js';
 	import WidgetCard from './WidgetCard.svelte';
 
 	let { notes }: { notes: NoteItem[] } = $props();
@@ -30,18 +28,7 @@
 						href={resolve(`/notes?note=${note.id}`)}
 						class="block rounded-lg p-2 transition-colors hover:bg-accent max-lg:min-h-11"
 					>
-						<span class="block truncate text-sm font-medium">{note.title}</span>
-						<span class="line-clamp-2 break-words text-xs text-muted-foreground">
-							{note.snippet || 'Empty note'}
-						</span>
-						<span class="mt-1 flex flex-wrap items-center gap-1.5">
-							<span class="text-xs text-muted-foreground tabular-nums">
-								{formatRelativeTime(note.updatedAt)}
-							</span>
-							{#each note.tags as tag (tag)}
-								<Badge variant="outline" class={tagBadgeClass(tag)}>{tag}</Badge>
-							{/each}
-						</span>
+						<NoteRowContent {note} />
 					</a>
 				</li>
 			{/each}

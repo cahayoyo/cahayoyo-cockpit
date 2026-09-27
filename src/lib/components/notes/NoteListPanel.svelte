@@ -16,14 +16,12 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import { onDestroy } from 'svelte';
 	import { ROOT_FOLDER_ID, type FolderRow } from '$lib/folders/tree.js';
-	import { formatRelativeTime } from '$lib/notes/format.js';
-	import { tagBadgeClass } from '$lib/notes/tag-badges.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { cn } from '$lib/utils.js';
+	import NoteRowContent from './NoteRowContent.svelte';
 	import type { NoteItem } from './types.js';
 
 	let {
@@ -287,7 +285,7 @@
 		{#if loading}
 			<div class="space-y-1" aria-busy="true">
 				{#each SKELETON_KEYS as key (key)}
-					<Skeleton class="h-16 rounded-lg" />
+					<Skeleton class="h-24 rounded-lg" />
 				{/each}
 			</div>
 		{:else if items.length > 0}
@@ -304,23 +302,7 @@
 							class="min-w-0 flex-1 px-2.5 py-2 text-left max-lg:min-h-11"
 							onclick={() => onSelect(note.id)}
 						>
-							<div class="flex items-center gap-1.5">
-								{#if note.pinned}
-									<Pin class="size-3 shrink-0 text-muted-foreground" />
-								{/if}
-								<span class="truncate text-sm font-medium">{note.title || 'Untitled'}</span>
-							</div>
-							<p class="line-clamp-2 break-words text-xs text-muted-foreground">
-								{note.snippet || 'Empty note'}
-							</p>
-							<div class="mt-1 flex flex-wrap items-center gap-1.5">
-								<span class="text-xs text-muted-foreground tabular-nums">
-									{formatRelativeTime(note.updatedAt)}
-								</span>
-								{#each note.tags as tag (tag)}
-									<Badge variant="outline" class={tagBadgeClass(tag)}>{tag}</Badge>
-								{/each}
-							</div>
+							<NoteRowContent {note} showPin />
 						</button>
 						<DropdownMenu.Root>
 							<DropdownMenu.Trigger

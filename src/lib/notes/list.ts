@@ -14,9 +14,9 @@ export function sortNotes<T extends SortableNote>(notes: readonly T[]): T[] {
 	);
 }
 
-// One-line plain-text preview for the note list: markdown syntax is dropped
-// (snake_case and hyphenated words survive), the body collapses to a single
-// line, and long text is truncated.
+// Plain-text preview for the note rows: markdown syntax is dropped
+// (snake_case and hyphenated words survive), whitespace collapses to a single
+// line, and long text is cut for the two-line clamp in the row.
 export function noteSnippet(body: string): string {
 	const plain = body
 		.replace(/^\s*```.*$/gm, '')
