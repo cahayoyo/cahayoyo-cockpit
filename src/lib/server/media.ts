@@ -26,7 +26,7 @@ export type SaveMediaResult = { ok: true; media: MediaRow } | { ok: false; error
 export type DeleteMediaResult =
 	{ ok: true } | { ok: false; bookmarkCount: number; noteCount: number };
 
-export async function saveMedia(file: File): Promise<SaveMediaResult> {
+export async function saveMedia(ownerId: string, file: File): Promise<SaveMediaResult> {
 	const parsed = mediaUploadSchema.safeParse(file);
 	if (!parsed.success) {
 		return { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid image.' };
@@ -42,6 +42,7 @@ export async function saveMedia(file: File): Promise<SaveMediaResult> {
 			.insert(media)
 			.values({
 				id,
+				ownerId,
 				originalName: file.name,
 				mimeType: file.type,
 				sizeBytes: file.size,
@@ -85,6 +86,7 @@ export async function listMedia(): Promise<MediaWithUsage[]> {
 		db
 			.select({
 				id: media.id,
+				ownerId: media.ownerId,
 				originalName: media.originalName,
 				mimeType: media.mimeType,
 				sizeBytes: media.sizeBytes,
@@ -113,8 +115,8 @@ export async function mediaUsageCount(id: string): Promise<number> {
 export async function deleteMedia(id: string): Promise<DeleteMediaResult> {
 	// The note half of this guard is a body scan, so the check and the delete
 	// are not atomic (there is deliberately no FK between note and media): a note
-	// saved in the gap could keep a dangling reference. Acceptable for a
-	// single-user workspace; a DB-level constraint is the fix if that changes.
+	// saved in the gap could keep a dangling reference. Acceptable at the current
+	// workspace scale; a DB-level constraint is the fix if that changes.
 	const [bookmarkCount, noteCounts] = await Promise.all([
 		bookmarkUsageCount(id),
 		noteUsageCounts()

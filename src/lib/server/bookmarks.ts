@@ -25,8 +25,13 @@ export async function listBookmarks(): Promise<BookmarkListItem[]> {
 	return rows.map((row) => ({ ...row, tags: tagsByBookmark.get(row.id) ?? [] }));
 }
 
-async function attachTags(tx: Transaction, bookmarkId: string, names: string[]): Promise<void> {
-	const tagIds = await ensureTagIds(tx, names);
+async function attachTags(
+	tx: Transaction,
+	ownerId: string,
+	bookmarkId: string,
+	names: string[]
+): Promise<void> {
+	const tagIds = await ensureTagIds(tx, ownerId, names);
 	if (tagIds.length === 0) {
 		return;
 	}
@@ -45,19 +50,23 @@ function bookmarkValues(input: BookmarkFormInput) {
 	};
 }
 
-export async function createBookmark(input: BookmarkFormInput): Promise<string> {
+export async function createBookmark(ownerId: string, input: BookmarkFormInput): Promise<string> {
 	return db.transaction(async (tx) => {
 		const [row] = await tx
 			.insert(bookmark)
-			.values(bookmarkValues(input))
+			.values({ ...bookmarkValues(input), ownerId })
 			.returning({ id: bookmark.id });
 
-		await attachTags(tx, row.id, input.tags);
+		await attachTags(tx, ownerId, row.id, input.tags);
 		return row.id;
 	});
 }
 
-export async function updateBookmark(id: string, input: BookmarkFormInput): Promise<boolean> {
+export async function updateBookmark(
+	ownerId: string,
+	id: string,
+	input: BookmarkFormInput
+): Promise<boolean> {
 	return db.transaction(async (tx) => {
 		const updated = await tx
 			.update(bookmark)
@@ -70,7 +79,7 @@ export async function updateBookmark(id: string, input: BookmarkFormInput): Prom
 		}
 
 		await tx.delete(bookmarkTag).where(eq(bookmarkTag.bookmarkId, id));
-		await attachTags(tx, id, input.tags);
+		await attachTags(tx, ownerId, id, input.tags);
 		return true;
 	});
 }

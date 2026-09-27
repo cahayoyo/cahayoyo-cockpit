@@ -13,6 +13,7 @@ import {
 	setNotePinned,
 	updateNote
 } from '$lib/server/notes';
+import { requireUserId } from '$lib/server/session';
 import { listTags } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
@@ -34,16 +35,16 @@ export const load: PageServerLoad = async ({ url }) => {
 export const actions: Actions = {
 	...folderActions,
 
-	createNote: async ({ request }) => {
+	createNote: async ({ request, locals }) => {
 		const folderId = optionalId(await request.formData(), 'folderId');
 		if (folderId && !(await folderExists(folderId))) {
 			return fail(400, { message: 'That folder no longer exists. Pick another one.' });
 		}
 
-		return { noteId: await createNote(folderId) };
+		return { noteId: await createNote(requireUserId(locals), folderId) };
 	},
 
-	saveNote: async ({ request }) => {
+	saveNote: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const id = requiredId(formData);
 		if (!id) {
@@ -67,7 +68,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'That folder no longer exists. Pick another one.' });
 		}
 
-		const savedAt = await updateNote(id, parsed.data);
+		const savedAt = await updateNote(requireUserId(locals), id, parsed.data);
 		if (!savedAt) {
 			return fail(404, { message: 'This note no longer exists.' });
 		}

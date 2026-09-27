@@ -60,17 +60,22 @@ export async function getNote(id: string): Promise<NoteListItem | null> {
 	return { ...row, tags: tagsByNote.get(id) ?? [], snippet: noteSnippet(row.body) };
 }
 
-export async function createNote(folderId: string | null = null): Promise<string> {
+export async function createNote(ownerId: string, folderId: string | null = null): Promise<string> {
 	const [row] = await db
 		.insert(note)
-		.values({ title: UNTITLED, body: '', folderId })
+		.values({ title: UNTITLED, body: '', folderId, ownerId })
 		.returning({ id: note.id });
 
 	return row.id;
 }
 
-async function attachTags(tx: Transaction, noteId: string, names: string[]): Promise<void> {
-	const tagIds = await ensureTagIds(tx, names);
+async function attachTags(
+	tx: Transaction,
+	ownerId: string,
+	noteId: string,
+	names: string[]
+): Promise<void> {
+	const tagIds = await ensureTagIds(tx, ownerId, names);
 	if (tagIds.length === 0) {
 		return;
 	}
@@ -78,7 +83,11 @@ async function attachTags(tx: Transaction, noteId: string, names: string[]): Pro
 	await tx.insert(noteTag).values(tagIds.map((tagId) => ({ noteId, tagId })));
 }
 
-export async function updateNote(id: string, input: NoteFormInput): Promise<Date | null> {
+export async function updateNote(
+	ownerId: string,
+	id: string,
+	input: NoteFormInput
+): Promise<Date | null> {
 	return db.transaction(async (tx) => {
 		const updated = await tx
 			.update(note)
@@ -91,7 +100,7 @@ export async function updateNote(id: string, input: NoteFormInput): Promise<Date
 		}
 
 		await tx.delete(noteTag).where(eq(noteTag.noteId, id));
-		await attachTags(tx, id, input.tags);
+		await attachTags(tx, ownerId, id, input.tags);
 		return updated[0].updatedAt;
 	});
 }

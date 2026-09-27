@@ -54,8 +54,13 @@ export async function listVaultEntries(): Promise<VaultEntryItem[]> {
 	return rows.map((row) => ({ ...row, tags: tagsByEntry.get(row.id) ?? [] }));
 }
 
-async function attachTags(tx: Transaction, entryId: string, names: string[]): Promise<void> {
-	const tagIds = await ensureTagIds(tx, names);
+async function attachTags(
+	tx: Transaction,
+	ownerId: string,
+	entryId: string,
+	names: string[]
+): Promise<void> {
+	const tagIds = await ensureTagIds(tx, ownerId, names);
 	if (tagIds.length === 0) {
 		return;
 	}
@@ -75,21 +80,25 @@ function entryValues(input: VaultFormInput, key: Buffer) {
 	};
 }
 
-export async function createEntry(input: VaultFormInput): Promise<CreateResult> {
+export async function createEntry(ownerId: string, input: VaultFormInput): Promise<CreateResult> {
 	const key = vaultKey;
 
 	return db.transaction(async (tx) => {
 		const [row] = await tx
 			.insert(vaultEntry)
-			.values(entryValues(input, key))
+			.values({ ...entryValues(input, key), ownerId })
 			.returning({ id: vaultEntry.id });
 
-		await attachTags(tx, row.id, input.tags);
+		await attachTags(tx, ownerId, row.id, input.tags);
 		return { ok: true, id: row.id };
 	});
 }
 
-export async function updateEntry(id: string, input: VaultFormInput): Promise<WriteResult> {
+export async function updateEntry(
+	ownerId: string,
+	id: string,
+	input: VaultFormInput
+): Promise<WriteResult> {
 	const key = vaultKey;
 
 	return db.transaction(async (tx) => {
@@ -104,7 +113,7 @@ export async function updateEntry(id: string, input: VaultFormInput): Promise<Wr
 		}
 
 		await tx.delete(vaultEntryTag).where(eq(vaultEntryTag.vaultEntryId, id));
-		await attachTags(tx, id, input.tags);
+		await attachTags(tx, ownerId, id, input.tags);
 		return { ok: true };
 	});
 }

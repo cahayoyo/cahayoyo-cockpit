@@ -36,14 +36,14 @@ function emailValues(input: EmailFormInput) {
 	};
 }
 
-export async function createEmail(input: EmailFormInput): Promise<CreateResult> {
+export async function createEmail(ownerId: string, input: EmailFormInput): Promise<CreateResult> {
 	if (input.taskId !== null && !(await taskExists(input.taskId))) {
 		return { ok: false, error: 'That task no longer exists.' };
 	}
 
 	const [row] = await db
 		.insert(disposableEmail)
-		.values(emailValues(input))
+		.values({ ...emailValues(input), ownerId })
 		.returning({ id: disposableEmail.id });
 
 	return { ok: true, id: row.id };

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import {
 	boolean,
@@ -9,6 +10,8 @@ import {
 	primaryKey,
 	text,
 	timestamp,
+	unique,
+	uniqueIndex,
 	uuid
 } from 'drizzle-orm/pg-core';
 
@@ -28,6 +31,12 @@ export const user = pgTable('user', {
 	email: text('email').notNull().unique(),
 	emailVerified: boolean('email_verified').default(false).notNull(),
 	image: text('image'),
+	// Better Auth admin plugin fields (ADR-0005). The plugin assigns `role` on
+	// create; the defaults keep direct inserts (seed script) valid.
+	role: text('role').default('user').notNull(),
+	banned: boolean('banned').default(false).notNull(),
+	banReason: text('ban_reason'),
+	banExpires: timestamp('ban_expires', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true })
 		.defaultNow()
@@ -48,6 +57,7 @@ export const session = pgTable(
 			.notNull(),
 		ipAddress: text('ip_address'),
 		userAgent: text('user_agent'),
+		impersonatedBy: text('impersonated_by'),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' })
@@ -115,107 +125,180 @@ export const disposableEmailStatus = pgEnum('disposable_email_status', ['active'
 
 export const vaultEntryType = pgEnum('vault_entry_type', ['login', 'api_key', 'note']);
 
-export const media = pgTable('media', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	originalName: text('original_name').notNull(),
-	mimeType: text('mime_type').notNull(),
-	sizeBytes: integer('size_bytes').notNull(),
-	storagePath: text('storage_path').notNull(),
-	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
-});
+export const media = pgTable(
+	'media',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		originalName: text('original_name').notNull(),
+		mimeType: text('mime_type').notNull(),
+		sizeBytes: integer('size_bytes').notNull(),
+		storagePath: text('storage_path').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [index('media_owner_id_idx').on(table.ownerId)]
+);
 
-export const folder = pgTable('folder', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	name: text('name').notNull(),
-	// Virtual-root tree: top-level folders have parent_id NULL; deleting a folder
-	// cascades to its subtree while contained bookmarks are unfiled via SET NULL.
-	parentId: uuid('parent_id').references((): AnyPgColumn => folder.id, { onDelete: 'cascade' }),
-	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
-});
+export const folder = pgTable(
+	'folder',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		// Virtual-root tree: top-level folders have parent_id NULL; deleting a folder
+		// cascades to its subtree while contained bookmarks are unfiled via SET NULL.
+		parentId: uuid('parent_id').references((): AnyPgColumn => folder.id, { onDelete: 'cascade' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [index('folder_owner_id_idx').on(table.ownerId)]
+);
 
-export const bookmark = pgTable('bookmark', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	title: text('title').notNull(),
-	url: text('url').notNull(),
-	description: text('description'),
-	favorite: boolean('favorite').default(false).notNull(),
-	imageId: uuid('image_id').references(() => media.id, { onDelete: 'restrict' }),
-	folderId: uuid('folder_id').references(() => folder.id, { onDelete: 'set null' }),
-	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
-});
+export const bookmark = pgTable(
+	'bookmark',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		url: text('url').notNull(),
+		description: text('description'),
+		favorite: boolean('favorite').default(false).notNull(),
+		imageId: uuid('image_id').references(() => media.id, { onDelete: 'restrict' }),
+		folderId: uuid('folder_id').references(() => folder.id, { onDelete: 'set null' }),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [index('bookmark_owner_id_idx').on(table.ownerId)]
+);
 
-export const note = pgTable('note', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	title: text('title').notNull(),
-	body: text('body').notNull().default(''),
-	folderId: uuid('folder_id').references(() => folder.id, { onDelete: 'set null' }),
-	pinned: boolean('pinned').default(false).notNull(),
-	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-	updatedAt: timestamp('updated_at', { withTimezone: true })
-		.defaultNow()
-		.$onUpdate(() => new Date())
-		.notNull()
-});
+export const note = pgTable(
+	'note',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		body: text('body').notNull().default(''),
+		folderId: uuid('folder_id').references(() => folder.id, { onDelete: 'set null' }),
+		pinned: boolean('pinned').default(false).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull()
+	},
+	(table) => [index('note_owner_id_idx').on(table.ownerId)]
+);
 
-export const project = pgTable('project', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	name: text('name').notNull(),
-	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
-});
+export const project = pgTable(
+	'project',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		isInbox: boolean('is_inbox').default(false).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		index('project_owner_id_idx').on(table.ownerId),
+		// One Inbox per owner; the partial index only covers is_inbox rows.
+		uniqueIndex('project_owner_inbox_unique_idx')
+			.on(table.ownerId)
+			.where(sql`"is_inbox"`)
+	]
+);
 
-export const task = pgTable('task', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	title: text('title').notNull(),
-	description: text('description'),
-	// ON DELETE no action: a project with tasks cannot be deleted (deliberate;
-	// revisit when project CRUD lands).
-	projectId: uuid('project_id')
-		.notNull()
-		.references(() => project.id),
-	status: taskStatus('status').default('backlog').notNull(),
-	priority: taskPriority('priority').default('medium').notNull(),
-	dueDate: date('due_date'),
-	// Depth (one level) and cycles are enforced in the app layer (PRD §5.5, Phase 7).
-	parentId: uuid('parent_id').references((): AnyPgColumn => task.id, { onDelete: 'cascade' }),
-	completedAt: timestamp('completed_at', { withTimezone: true }),
-	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-	updatedAt: timestamp('updated_at', { withTimezone: true })
-		.defaultNow()
-		.$onUpdate(() => new Date())
-		.notNull()
-});
+export const task = pgTable(
+	'task',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		description: text('description'),
+		// ON DELETE no action: a project with tasks cannot be deleted (deliberate;
+		// revisit when project CRUD lands).
+		projectId: uuid('project_id')
+			.notNull()
+			.references(() => project.id),
+		status: taskStatus('status').default('backlog').notNull(),
+		priority: taskPriority('priority').default('medium').notNull(),
+		dueDate: date('due_date'),
+		// Depth (one level) and cycles are enforced in the app layer (PRD §5.5, Phase 7).
+		parentId: uuid('parent_id').references((): AnyPgColumn => task.id, { onDelete: 'cascade' }),
+		completedAt: timestamp('completed_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull()
+	},
+	(table) => [index('task_owner_id_idx').on(table.ownerId)]
+);
 
-export const disposableEmail = pgTable('disposable_email', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	address: text('address').notNull(),
-	provider: text('provider'),
-	purpose: text('purpose'),
-	taskId: uuid('task_id').references(() => task.id, { onDelete: 'set null' }),
-	status: disposableEmailStatus('status').default('active').notNull(),
-	notes: text('notes'),
-	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
-});
+export const disposableEmail = pgTable(
+	'disposable_email',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		address: text('address').notNull(),
+		provider: text('provider'),
+		purpose: text('purpose'),
+		taskId: uuid('task_id').references(() => task.id, { onDelete: 'set null' }),
+		status: disposableEmailStatus('status').default('active').notNull(),
+		notes: text('notes'),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [index('disposable_email_owner_id_idx').on(table.ownerId)]
+);
 
-export const vaultEntry = pgTable('vault_entry', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	title: text('title').notNull(),
-	type: vaultEntryType('type').notNull(),
-	username: text('username'),
-	secretValue: text('secret_value').notNull(),
-	url: text('url'),
-	notes: text('notes'),
-	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
-	updatedAt: timestamp('updated_at', { withTimezone: true })
-		.defaultNow()
-		.$onUpdate(() => new Date())
-		.notNull()
-});
+export const vaultEntry = pgTable(
+	'vault_entry',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		title: text('title').notNull(),
+		type: vaultEntryType('type').notNull(),
+		username: text('username'),
+		secretValue: text('secret_value').notNull(),
+		url: text('url'),
+		notes: text('notes'),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull()
+	},
+	(table) => [index('vault_entry_owner_id_idx').on(table.ownerId)]
+);
 
-export const tag = pgTable('tag', {
-	id: uuid('id').primaryKey().defaultRandom(),
-	name: text('name').notNull().unique(),
-	createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
-});
+export const tag = pgTable(
+	'tag',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		ownerId: text('owner_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		name: text('name').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
+	},
+	(table) => [
+		index('tag_owner_id_idx').on(table.ownerId),
+		unique('tag_owner_name_unique').on(table.ownerId, table.name)
+	]
+);
 
 export const bookmarkTag = pgTable(
 	'bookmark_tag',

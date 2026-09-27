@@ -13,6 +13,7 @@ import {
 	renameProject
 } from '$lib/server/tasks';
 import { projectNameSchema } from '$lib/server/tasks-schemas';
+import { requireUserId } from '$lib/server/session';
 import { listTags } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
@@ -41,13 +42,13 @@ export const load: PageServerLoad = async ({ url }) => {
 export const actions: Actions = {
 	...taskActions,
 
-	createProject: async ({ request }) => {
+	createProject: async ({ request, locals }) => {
 		const parsed = projectNameSchema.safeParse(text(await request.formData(), 'name'));
 		if (!parsed.success) {
 			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid project.' });
 		}
 
-		return { projectId: await createProject(parsed.data) };
+		return { projectId: await createProject(requireUserId(locals), parsed.data) };
 	},
 
 	renameProject: async ({ request }) => {

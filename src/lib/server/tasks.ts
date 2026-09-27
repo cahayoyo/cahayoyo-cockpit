@@ -115,8 +115,13 @@ async function checkParent(taskId: string | null, parentId: string): Promise<str
 	return null;
 }
 
-async function attachTags(tx: Transaction, taskId: string, names: string[]): Promise<void> {
-	const tagIds = await ensureTagIds(tx, names);
+async function attachTags(
+	tx: Transaction,
+	ownerId: string,
+	taskId: string,
+	names: string[]
+): Promise<void> {
+	const tagIds = await ensureTagIds(tx, ownerId, names);
 	if (tagIds.length === 0) {
 		return;
 	}
@@ -135,7 +140,7 @@ function taskValues(input: TaskFormInput) {
 	};
 }
 
-export async function createTask(input: TaskFormInput): Promise<CreateResult> {
+export async function createTask(ownerId: string, input: TaskFormInput): Promise<CreateResult> {
 	if (!(await projectExists(input.projectId))) {
 		return { ok: false, error: 'That project no longer exists.' };
 	}
@@ -148,8 +153,11 @@ export async function createTask(input: TaskFormInput): Promise<CreateResult> {
 	}
 
 	const id = await db.transaction(async (tx) => {
-		const [row] = await tx.insert(task).values(taskValues(input)).returning({ id: task.id });
-		await attachTags(tx, row.id, input.tags);
+		const [row] = await tx
+			.insert(task)
+			.values({ ...taskValues(input), ownerId })
+			.returning({ id: task.id });
+		await attachTags(tx, ownerId, row.id, input.tags);
 		return row.id;
 	});
 
@@ -157,7 +165,11 @@ export async function createTask(input: TaskFormInput): Promise<CreateResult> {
 }
 
 // Status is not part of the save input: it only changes through setTaskStatus.
-export async function updateTask(id: string, input: TaskFormInput): Promise<WriteResult> {
+export async function updateTask(
+	ownerId: string,
+	id: string,
+	input: TaskFormInput
+): Promise<WriteResult> {
 	const [current] = await db.select({ id: task.id }).from(task).where(eq(task.id, id));
 	if (!current) {
 		return { ok: false, error: 'This task no longer exists.' };
@@ -181,7 +193,7 @@ export async function updateTask(id: string, input: TaskFormInput): Promise<Writ
 	await db.transaction(async (tx) => {
 		await tx.update(task).set(taskValues(input)).where(eq(task.id, id));
 		await tx.delete(taskTag).where(eq(taskTag.taskId, id));
-		await attachTags(tx, id, input.tags);
+		await attachTags(tx, ownerId, id, input.tags);
 	});
 
 	return { ok: true };
@@ -246,8 +258,8 @@ export async function listProjects(): Promise<ProjectListItem[]> {
 	}));
 }
 
-export async function createProject(name: string): Promise<string> {
-	const [row] = await db.insert(project).values({ name }).returning({ id: project.id });
+export async function createProject(ownerId: string, name: string): Promise<string> {
+	const [row] = await db.insert(project).values({ name, ownerId }).returning({ id: project.id });
 	return row.id;
 }
 
