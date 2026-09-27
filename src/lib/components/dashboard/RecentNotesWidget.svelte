@@ -3,9 +3,9 @@
 	// (selection happens in $lib/dashboard/select). Rows deep-link to /notes?note=<id>.
 	import NotebookPen from '@lucide/svelte/icons/notebook-pen';
 	import { resolve } from '$app/paths';
+	import NoteRowContent from '$lib/components/notes/NoteRowContent.svelte';
 	import type { NoteItem } from '$lib/components/notes/types.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { dateInAppZone } from '$lib/tasks/today.js';
 	import WidgetCard from './WidgetCard.svelte';
 
 	let { notes }: { notes: NoteItem[] } = $props();
@@ -21,18 +21,15 @@
 			</Button>
 		</div>
 	{:else}
-		<ul class="space-y-2">
+		<ul class="space-y-1">
 			{#each notes as note (note.id)}
-				<li class="flex items-center gap-2">
+				<li>
 					<a
 						href={resolve(`/notes?note=${note.id}`)}
-						class="flex min-w-0 flex-1 items-center text-sm hover:underline max-lg:min-h-11"
+						class="block rounded-lg p-2 transition-colors hover:bg-accent max-lg:min-h-11"
 					>
-						<span class="truncate">{note.title}</span>
+						<NoteRowContent {note} />
 					</a>
-					<span class="shrink-0 text-xs text-muted-foreground tabular-nums">
-						{dateInAppZone(note.updatedAt)}
-					</span>
 				</li>
 			{/each}
 		</ul>
