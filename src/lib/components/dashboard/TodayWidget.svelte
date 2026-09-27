@@ -29,7 +29,7 @@
 	let input = $state<HTMLInputElement | null>(null);
 </script>
 
-<WidgetCard title="Today" href="/today">
+<WidgetCard title="Today" href="/today" icon={CalendarCheck}>
 	<div class="space-y-3">
 		<form
 			class="flex items-center gap-2"

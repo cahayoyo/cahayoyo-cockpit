@@ -101,7 +101,7 @@
 			{#snippet child({ props })}
 				<Button variant="ghost" size="sm" class="min-h-11 gap-2 sm:min-h-7" {...props}>
 					<span
-						class="grid size-6 shrink-0 place-items-center rounded-full bg-muted text-xs font-medium"
+						class="grid size-6 shrink-0 place-items-center rounded-full bg-accent text-xs font-medium text-accent-foreground"
 					>
 						{email?.slice(0, 1).toUpperCase() ?? '?'}
 					</span>

@@ -11,7 +11,7 @@
 	let { notes }: { notes: NoteItem[] } = $props();
 </script>
 
-<WidgetCard title="Recent notes" href="/notes">
+<WidgetCard title="Recent notes" href="/notes" icon={NotebookPen}>
 	{#if notes.length === 0}
 		<div class="flex flex-col items-center gap-3 py-4 text-center">
 			<NotebookPen class="size-6 text-muted-foreground" />
