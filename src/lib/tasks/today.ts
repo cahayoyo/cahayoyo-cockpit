@@ -1,6 +1,6 @@
 // "Today" is computed in the app timezone (Asia/Jakarta), never the server
 // container's timezone (grill decision Q8) — due dates must not shift by a day.
-const APP_TIME_ZONE = 'Asia/Jakarta';
+export const APP_TIME_ZONE = 'Asia/Jakarta';
 
 const dateFormat = new Intl.DateTimeFormat('en-CA', { timeZone: APP_TIME_ZONE });
 

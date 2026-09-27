@@ -16,7 +16,9 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import { onDestroy } from 'svelte';
 	import { ROOT_FOLDER_ID, type FolderRow } from '$lib/folders/tree.js';
-	import { formatDateTime } from '$lib/notes/format.js';
+	import { formatRelativeTime } from '$lib/notes/format.js';
+	import { tagBadgeClass } from '$lib/notes/tag-badges.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -308,12 +310,17 @@
 								{/if}
 								<span class="truncate text-sm font-medium">{note.title || 'Untitled'}</span>
 							</div>
-							<p class="truncate text-xs text-muted-foreground">
+							<p class="line-clamp-2 break-words text-xs text-muted-foreground">
 								{note.snippet || 'Empty note'}
 							</p>
-							<p class="text-xs text-muted-foreground tabular-nums">
-								{formatDateTime(note.updatedAt)}
-							</p>
+							<div class="mt-1 flex flex-wrap items-center gap-1.5">
+								<span class="text-xs text-muted-foreground tabular-nums">
+									{formatRelativeTime(note.updatedAt)}
+								</span>
+								{#each note.tags as tag (tag)}
+									<Badge variant="outline" class={tagBadgeClass(tag)}>{tag}</Badge>
+								{/each}
+							</div>
 						</button>
 						<DropdownMenu.Root>
 							<DropdownMenu.Trigger

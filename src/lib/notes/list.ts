@@ -3,7 +3,9 @@ type SortableNote = {
 	updatedAt: Date;
 };
 
-const SNIPPET_LENGTH = 80;
+// The list rows clamp the preview to two lines, so the snippet must carry
+// enough text to fill them; longer bodies are cut here first.
+const SNIPPET_LENGTH = 160;
 
 // List order: pinned notes first, then most recently updated.
 export function sortNotes<T extends SortableNote>(notes: readonly T[]): T[] {

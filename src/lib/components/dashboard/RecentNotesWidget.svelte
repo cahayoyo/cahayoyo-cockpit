@@ -4,8 +4,10 @@
 	import NotebookPen from '@lucide/svelte/icons/notebook-pen';
 	import { resolve } from '$app/paths';
 	import type { NoteItem } from '$lib/components/notes/types.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { dateInAppZone } from '$lib/tasks/today.js';
+	import { formatRelativeTime } from '$lib/notes/format.js';
+	import { tagBadgeClass } from '$lib/notes/tag-badges.js';
 	import WidgetCard from './WidgetCard.svelte';
 
 	let { notes }: { notes: NoteItem[] } = $props();
@@ -21,18 +23,26 @@
 			</Button>
 		</div>
 	{:else}
-		<ul class="space-y-2">
+		<ul class="space-y-1">
 			{#each notes as note (note.id)}
-				<li class="flex items-center gap-2">
+				<li>
 					<a
 						href={resolve(`/notes?note=${note.id}`)}
-						class="flex min-w-0 flex-1 items-center text-sm hover:underline max-lg:min-h-11"
+						class="block rounded-lg p-2 transition-colors hover:bg-accent max-lg:min-h-11"
 					>
-						<span class="truncate">{note.title}</span>
+						<span class="block truncate text-sm font-medium">{note.title}</span>
+						<span class="line-clamp-2 break-words text-xs text-muted-foreground">
+							{note.snippet || 'Empty note'}
+						</span>
+						<span class="mt-1 flex flex-wrap items-center gap-1.5">
+							<span class="text-xs text-muted-foreground tabular-nums">
+								{formatRelativeTime(note.updatedAt)}
+							</span>
+							{#each note.tags as tag (tag)}
+								<Badge variant="outline" class={tagBadgeClass(tag)}>{tag}</Badge>
+							{/each}
+						</span>
 					</a>
-					<span class="shrink-0 text-xs text-muted-foreground tabular-nums">
-						{dateInAppZone(note.updatedAt)}
-					</span>
 				</li>
 			{/each}
 		</ul>
