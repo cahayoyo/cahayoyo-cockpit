@@ -22,7 +22,8 @@ export type ProjectListItem = typeof project.$inferSelect & {
 };
 
 export type CreateResult = { ok: true; id: string } | { ok: false; error: string };
-export type WriteResult = { ok: true } | { ok: false; error: string };
+export type WriteResult =
+	{ ok: true } | { ok: false; reason: 'missing' | 'invalid'; error: string };
 
 async function tagsByTaskId(ids: string[]): Promise<Map<string, string[]>> {
 	if (ids.length === 0) {
@@ -191,21 +192,25 @@ export async function updateTask(
 		.where(and(eq(task.id, id), eq(task.ownerId, ownerId)));
 
 	if (!current) {
-		return { ok: false, error: 'This task no longer exists.' };
+		return { ok: false, reason: 'missing', error: 'This task no longer exists.' };
 	}
 
 	if (!(await projectExists(ownerId, input.projectId))) {
-		return { ok: false, error: 'That project no longer exists.' };
+		return { ok: false, reason: 'invalid', error: 'That project no longer exists.' };
 	}
 
 	if (input.parentId !== null) {
 		const error = await checkParent(ownerId, id, input.parentId);
 		if (error) {
-			return { ok: false, error };
+			return { ok: false, reason: 'invalid', error };
 		}
 
 		if (await hasSubtasks(ownerId, id)) {
-			return { ok: false, error: 'This task has subtasks, so it cannot become a subtask.' };
+			return {
+				ok: false,
+				reason: 'invalid',
+				error: 'This task has subtasks, so it cannot become a subtask.'
+			};
 		}
 	}
 
@@ -250,7 +255,7 @@ export async function moveTaskProject(
 	projectId: string
 ): Promise<WriteResult> {
 	if (!(await projectExists(ownerId, projectId))) {
-		return { ok: false, error: 'That project no longer exists.' };
+		return { ok: false, reason: 'invalid', error: 'That project no longer exists.' };
 	}
 
 	const [updated] = await db
@@ -260,7 +265,7 @@ export async function moveTaskProject(
 		.returning({ id: task.id });
 
 	if (!updated) {
-		return { ok: false, error: 'This task no longer exists.' };
+		return { ok: false, reason: 'missing', error: 'This task no longer exists.' };
 	}
 
 	return { ok: true };
@@ -326,11 +331,11 @@ export async function deleteProject(ownerId: string, id: string): Promise<WriteR
 		.where(and(eq(project.id, id), eq(project.ownerId, ownerId)));
 
 	if (!row) {
-		return { ok: false, error: 'This project no longer exists.' };
+		return { ok: false, reason: 'missing', error: 'This project no longer exists.' };
 	}
 
 	if (row.isInbox) {
-		return { ok: false, error: 'The Inbox project cannot be deleted.' };
+		return { ok: false, reason: 'invalid', error: 'The Inbox project cannot be deleted.' };
 	}
 
 	const [tasks] = await db
@@ -341,6 +346,7 @@ export async function deleteProject(ownerId: string, id: string): Promise<WriteR
 	if (tasks.value > 0) {
 		return {
 			ok: false,
+			reason: 'invalid',
 			error: `This project still has ${tasks.value} task${tasks.value === 1 ? '' : 's'}.`
 		};
 	}

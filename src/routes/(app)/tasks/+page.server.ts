@@ -79,7 +79,7 @@ export const actions: Actions = {
 
 		const deleted = await deleteProject(requireUserId(locals), id);
 		if (!deleted.ok) {
-			return fail(409, { message: deleted.error });
+			return fail(deleted.reason === 'missing' ? 404 : 409, { message: deleted.error });
 		}
 
 		return { deleted: true };

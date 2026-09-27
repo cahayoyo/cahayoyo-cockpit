@@ -1,8 +1,16 @@
 import { fail, type RequestEvent } from '@sveltejs/kit';
 import { z } from 'zod';
+import { todayIso } from '$lib/tasks/today';
 import { optionalId, requiredId, text } from './form-data';
 import { requireUserId } from './session';
-import { createTask, deleteTask, moveTaskProject, setTaskStatus, updateTask } from './tasks';
+import {
+	createTask,
+	deleteTask,
+	getInboxProjectId,
+	moveTaskProject,
+	setTaskStatus,
+	updateTask
+} from './tasks';
 import { taskFormSchema, taskStatusSchema } from './tasks-schemas';
 
 const idSchema = z.uuid();
@@ -48,10 +56,41 @@ export const taskActions = {
 
 		const updated = await updateTask(ownerId, parsedId.data, parsed.data);
 		if (!updated.ok) {
-			return fail(400, { message: updated.error });
+			return fail(updated.reason === 'missing' ? 404 : 400, { message: updated.error });
 		}
 
 		return { saved: true, taskId: parsedId.data };
+	},
+
+	// Quick add (dashboard + Today): title only, straight to Inbox in Backlog,
+	// due today so the task lands in the Today widget right after the submit.
+	quickAdd: async ({ request, locals }: RequestEvent) => {
+		const ownerId = requireUserId(locals);
+		const inboxId = await getInboxProjectId(ownerId);
+		if (!inboxId) {
+			return fail(400, { message: 'No Inbox project found.' });
+		}
+
+		const parsed = taskFormSchema.safeParse({
+			title: text(await request.formData(), 'title'),
+			description: '',
+			projectId: inboxId,
+			priority: 'medium',
+			dueDate: todayIso(),
+			parentId: null,
+			tags: ''
+		});
+
+		if (!parsed.success) {
+			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid task.' });
+		}
+
+		const created = await createTask(ownerId, parsed.data);
+		if (!created.ok) {
+			return fail(400, { message: created.error });
+		}
+
+		return { taskId: created.id };
 	},
 
 	setTaskStatus: async ({ request, locals }: RequestEvent) => {
@@ -79,7 +118,7 @@ export const taskActions = {
 
 		const moved = await moveTaskProject(requireUserId(locals), id, projectId);
 		if (!moved.ok) {
-			return fail(400, { message: moved.error });
+			return fail(moved.reason === 'missing' ? 404 : 400, { message: moved.error });
 		}
 
 		return { moved: true };

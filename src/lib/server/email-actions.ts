@@ -41,7 +41,7 @@ export const emailActions = {
 
 		const updated = await updateEmail(requireUserId(locals), parsedId.data, parsed.data);
 		if (!updated.ok) {
-			return fail(400, { message: updated.error });
+			return fail(updated.reason === 'missing' ? 404 : 400, { message: updated.error });
 		}
 
 		return { saved: true, emailId: parsedId.data };

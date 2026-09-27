@@ -10,7 +10,8 @@ import { ensureTagIds } from './tags';
 import { decryptSecret, encryptSecret } from './vault-crypto';
 
 export type CreateResult = { ok: true; id: string } | { ok: false; error: string };
-export type WriteResult = { ok: true } | { ok: false; error: string };
+export type WriteResult =
+	{ ok: true } | { ok: false; reason: 'missing' | 'invalid'; error: string };
 
 export type RevealResult =
 	| { ok: true; secret: string; notes: string | null }
@@ -110,7 +111,7 @@ export async function updateEntry(
 			.returning({ id: vaultEntry.id });
 
 		if (updated.length === 0) {
-			return { ok: false, error: 'This entry no longer exists.' };
+			return { ok: false, reason: 'missing', error: 'This entry no longer exists.' };
 		}
 
 		await tx.delete(vaultEntryTag).where(eq(vaultEntryTag.vaultEntryId, id));

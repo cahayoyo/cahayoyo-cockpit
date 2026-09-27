@@ -7,14 +7,15 @@ import { disposableEmail, task } from './db/schema';
 export type EmailListItem = typeof disposableEmail.$inferSelect & { taskTitle: string | null };
 
 export type CreateResult = { ok: true; id: string } | { ok: false; error: string };
-export type WriteResult = { ok: true } | { ok: false; error: string };
+export type WriteResult =
+	{ ok: true } | { ok: false; reason: 'missing' | 'invalid'; error: string };
 
 /** Every recorded address with its linked task title (null when unlinked). */
 export async function listEmails(ownerId: string): Promise<EmailListItem[]> {
 	const rows = await db
 		.select({ email: disposableEmail, taskTitle: task.title })
 		.from(disposableEmail)
-		.leftJoin(task, eq(disposableEmail.taskId, task.id))
+		.leftJoin(task, and(eq(disposableEmail.taskId, task.id), eq(task.ownerId, ownerId)))
 		.where(eq(disposableEmail.ownerId, ownerId))
 		.orderBy(desc(disposableEmail.createdAt));
 
@@ -65,11 +66,11 @@ export async function updateEmail(
 		.where(and(eq(disposableEmail.id, id), eq(disposableEmail.ownerId, ownerId)));
 
 	if (!current) {
-		return { ok: false, error: 'This address no longer exists.' };
+		return { ok: false, reason: 'missing', error: 'This address no longer exists.' };
 	}
 
 	if (input.taskId !== null && !(await taskExists(ownerId, input.taskId))) {
-		return { ok: false, error: 'That task no longer exists.' };
+		return { ok: false, reason: 'invalid', error: 'That task no longer exists.' };
 	}
 
 	await db
