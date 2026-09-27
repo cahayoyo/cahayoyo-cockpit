@@ -3,6 +3,7 @@ import { changePasswordSchema } from './account-schemas';
 import { auth } from './auth';
 import { applyAuthCookies } from './auth-cookies';
 import { text } from './form-data';
+import { passwordChangeFailure } from './password-change';
 import { requireUserId } from './session';
 
 // Self-service auth actions, shaped like taskActions / folderActions — the
@@ -16,7 +17,9 @@ export const authActions = {
 			newPassword: text(formData, 'newPassword')
 		});
 		if (!parsed.success) {
-			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid password.' });
+			const issue = parsed.error.issues[0];
+			const field = issue?.path[0] === 'currentPassword' ? 'currentPassword' : 'newPassword';
+			return fail(400, { field, message: issue?.message ?? 'Invalid password.' });
 		}
 
 		// asResponse: revoking the other sessions replaces this session too, so
@@ -28,16 +31,10 @@ export const authActions = {
 		});
 
 		if (!response.ok) {
-			// A 400 here is the wrong current password: the new password already
-			// passed the same 8-character floor Better Auth enforces.
-			if (response.status === 400) {
-				return fail(400, {
-					field: 'currentPassword',
-					message: 'Your current password is incorrect.'
-				});
-			}
-
-			return fail(response.status, { message: 'Could not change the password. Try again.' });
+			// Better Auth serializes API errors as `{ code, message }`; only the
+			// wrong-current-password code becomes a field error.
+			const body = (await response.json().catch(() => null)) as { code?: string } | null;
+			return fail(response.status, passwordChangeFailure(body?.code));
 		}
 
 		applyAuthCookies(cookies, response);

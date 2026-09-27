@@ -3,17 +3,22 @@ import { dbIdSchema } from '$lib/ids';
 
 // Account lifecycle and password rules (spec §6, §7). The minimum length
 // matches Better Auth's default (8) so no path ever hands it a shorter password.
-export const PASSWORD_MIN_LENGTH = 8;
+const PASSWORD_MIN_LENGTH = 8;
 
 const passwordSchema = z
 	.string()
 	.min(PASSWORD_MIN_LENGTH, `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
 	.max(128, 'Password is too long.');
 
-export const changePasswordSchema = z.object({
-	currentPassword: z.string().min(1, 'Enter your current password.'),
-	newPassword: passwordSchema
-});
+export const changePasswordSchema = z
+	.object({
+		currentPassword: z.string().min(1, 'Enter your current password.'),
+		newPassword: passwordSchema
+	})
+	.refine((data) => data.newPassword !== data.currentPassword, {
+		path: ['newPassword'],
+		message: 'The new password must be different from the current one.'
+	});
 
 export const createUserSchema = z.object({
 	email: z.string().trim().pipe(z.email('Enter a valid email address.')),

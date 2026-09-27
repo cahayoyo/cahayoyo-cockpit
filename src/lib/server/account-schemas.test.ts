@@ -29,6 +29,13 @@ describe('changePasswordSchema', () => {
 				.success
 		).toBe(false);
 	});
+
+	test('rejects a new password equal to the current one', () => {
+		expect(
+			changePasswordSchema.safeParse({ currentPassword: 'password', newPassword: 'password' })
+				.success
+		).toBe(false);
+	});
 });
 
 describe('createUserSchema', () => {

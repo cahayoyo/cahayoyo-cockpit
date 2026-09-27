@@ -4,14 +4,20 @@ import { createUserSchema, resetUserPasswordSchema, setUserActiveSchema } from '
 import { text } from './form-data';
 import { createUser, listUsers, resetUserPassword, setUserActive } from './users';
 
-// Expected auth failures (duplicate email, forbidden) become form failures;
-// anything else is not ours to swallow.
+// Expected auth failures become form failures with curated messages; the raw
+// Better Auth detail only reaches the server log (CODE_STANDARDS §5).
 function failFromAuthError(error: unknown) {
-	if (isAPIError(error)) {
-		return fail(error.statusCode, { message: error.message });
+	if (!isAPIError(error)) {
+		throw error;
 	}
 
-	throw error;
+	console.error('Account action failed:', error.status, error.message);
+
+	if (error.body?.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL') {
+		return fail(409, { message: 'An account with that email already exists.' });
+	}
+
+	return fail(error.statusCode, { message: 'The account action failed. Try again.' });
 }
 
 // Super-admin account management (spec §6): same shape as taskActions /

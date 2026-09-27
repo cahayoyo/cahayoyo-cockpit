@@ -61,6 +61,7 @@ export async function listUsers(event: RequestEvent): Promise<AccountListItem[]>
 	requireAdmin(event.locals);
 	const result = await auth.api.listUsers({
 		headers: event.request.headers,
+		// Single instance, a handful of accounts: one page is enough (no pagination yet).
 		query: { limit: 200, sortBy: 'createdAt', sortDirection: 'desc' }
 	});
 
