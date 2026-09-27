@@ -1,11 +1,13 @@
 <script lang="ts">
 	// Settings page (#88): self-service change password. The server action
-	// validates the password change and revokes the other sessions; matching the
-	// confirmation field is a client-side concern.
+	// (`authActions.changePassword`, backend #86) validates current/new and revokes
+	// the other sessions. Matching the confirmation field is a deliberate
+	// client-side guard — the backend contract is out of this UI issue's scope,
+	// so a direct no-JS post gets only the server-side rules.
 	import { enhance } from '$app/forms';
-	import CircleAlert from '@lucide/svelte/icons/circle-alert';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { toast } from 'svelte-sonner';
+	import FormAlert from '$lib/components/FormAlert.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
 		Card,
@@ -62,13 +64,7 @@
 				}}
 			>
 				{#if formError}
-					<div
-						class="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3"
-						role="alert"
-					>
-						<CircleAlert class="size-4 shrink-0 text-destructive" />
-						<p class="text-sm text-destructive">{formError}</p>
-					</div>
+					<FormAlert message={formError} />
 				{/if}
 
 				<div class="space-y-2">
@@ -80,9 +76,12 @@
 						autocomplete="current-password"
 						required
 						aria-invalid={currentError !== ''}
+						aria-describedby={currentError ? 'settings-current-password-error' : undefined}
 					/>
 					{#if currentError}
-						<p class="text-sm text-destructive">{currentError}</p>
+						<p id="settings-current-password-error" role="alert" class="text-sm text-destructive">
+							{currentError}
+						</p>
 					{/if}
 				</div>
 
@@ -95,11 +94,18 @@
 						autocomplete="new-password"
 						required
 						aria-invalid={newError !== ''}
+						aria-describedby={newError
+							? 'settings-new-password-error'
+							: 'settings-new-password-hint'}
 					/>
 					{#if newError}
-						<p class="text-sm text-destructive">{newError}</p>
+						<p id="settings-new-password-error" role="alert" class="text-sm text-destructive">
+							{newError}
+						</p>
 					{:else}
-						<p class="text-sm text-muted-foreground">At least 8 characters.</p>
+						<p id="settings-new-password-hint" class="text-sm text-muted-foreground">
+							At least 8 characters.
+						</p>
 					{/if}
 				</div>
 
@@ -112,14 +118,17 @@
 						autocomplete="new-password"
 						required
 						aria-invalid={mismatch}
+						aria-describedby={mismatch ? 'settings-confirm-password-error' : undefined}
 						oninput={() => (mismatch = false)}
 					/>
 					{#if mismatch}
-						<p class="text-sm text-destructive">The passwords do not match.</p>
+						<p id="settings-confirm-password-error" role="alert" class="text-sm text-destructive">
+							The passwords do not match.
+						</p>
 					{/if}
 				</div>
 
-				<Button type="submit" disabled={submitting} class="max-sm:h-11">
+				<Button type="submit" disabled={submitting} class="min-w-40 max-sm:h-11">
 					{#if submitting}
 						<LoaderCircle class="size-4 animate-spin" />
 						<span class="sr-only">Changing password</span>
