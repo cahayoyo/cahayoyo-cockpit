@@ -7,9 +7,10 @@
 	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
 	import Sun from '@lucide/svelte/icons/sun';
 	import { onMount } from 'svelte';
-	import { toggleMode } from 'mode-watcher';
+	import { mode, toggleMode } from 'mode-watcher';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import { cn } from '$lib/utils.js';
 	import { formatClock } from './clock.js';
 
 	let {
@@ -26,6 +27,8 @@
 
 	let signOutForm: HTMLFormElement | null = $state(null);
 	let now = $state<Date | null>(null);
+
+	const isDark = $derived(mode.current === 'dark');
 
 	onMount(() => {
 		now = new Date();
@@ -85,16 +88,25 @@
 		</time>
 	{/if}
 
-	<Button
-		variant="ghost"
-		size="icon-sm"
-		class="size-11 sm:size-7"
-		aria-label="Toggle theme"
-		onclick={toggleMode}
-	>
-		<Moon class="dark:hidden" />
-		<Sun class="hidden dark:block" />
-	</Button>
+	<div class="flex items-center gap-1.5">
+		<Sun class="size-4 text-muted-foreground" />
+		<button
+			type="button"
+			role="switch"
+			aria-checked={isDark}
+			aria-label="Toggle dark mode"
+			onclick={toggleMode}
+			class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border bg-muted px-0.5 transition-colors before:absolute before:inset-x-0 before:-inset-y-2.5 before:content-[''] hover:border-ring/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none"
+		>
+			<span
+				class={cn(
+					'size-5 rounded-full bg-background shadow-sm transition-transform duration-200 ease-standard motion-reduce:transition-none',
+					isDark && 'translate-x-5'
+				)}
+			></span>
+		</button>
+		<Moon class="size-4 text-muted-foreground" />
+	</div>
 
 	<DropdownMenu.Root>
 		<DropdownMenu.Trigger>
