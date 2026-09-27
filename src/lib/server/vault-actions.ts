@@ -3,16 +3,18 @@ import { dbIdSchema } from '$lib/ids';
 import { vaultFormSchema } from '$lib/vault/schemas';
 import { auth } from './auth';
 import { requiredId, text } from './form-data';
+import { requireUserId } from './session';
 import { createEntry, deleteEntry, revealEntry, updateEntry } from './vault';
 import { clearVaultUnlock, isVaultUnlocked, issueVaultUnlock } from './vault-unlock';
 
 const LOCKED = 'Vault is locked.';
 const INVALID = 'Invalid entry.';
+const MISSING = 'This entry no longer exists.';
 
 // Vault form actions: one implementation for the vault page — the vaultActions
 // counterpart of taskActions/folderActions/emailActions.
 export const vaultActions = {
-	unlockVault: async ({ request, cookies }: RequestEvent) => {
+	unlockVault: async ({ request, cookies, locals }: RequestEvent) => {
 		const password = text(await request.formData(), 'password');
 
 		// No rate limiting on password attempts in v1 (grill decision 18): a single
@@ -23,7 +25,7 @@ export const vaultActions = {
 			return fail(401, { message: 'Incorrect password.' });
 		}
 
-		issueVaultUnlock(cookies);
+		issueVaultUnlock(cookies, requireUserId(locals));
 		return { unlocked: true };
 	},
 
@@ -32,9 +34,10 @@ export const vaultActions = {
 		return { locked: true };
 	},
 
-	saveEntry: async ({ request, cookies }: RequestEvent) => {
+	saveEntry: async ({ request, cookies, locals }: RequestEvent) => {
 		// Create and edit put plaintext into a form, so they are gated too.
-		if (!isVaultUnlocked(cookies)) {
+		const ownerId = requireUserId(locals);
+		if (!isVaultUnlocked(cookies, ownerId)) {
 			return fail(401, { message: LOCKED });
 		}
 
@@ -56,12 +59,12 @@ export const vaultActions = {
 		// No id: the dialog is creating; otherwise it edits that record.
 		const id = text(formData, 'id');
 		if (id === '') {
-			const created = await createEntry(parsed.data);
+			const created = await createEntry(ownerId, parsed.data);
 			if (!created.ok) {
 				return fail(400, { message: created.error });
 			}
 
-			issueVaultUnlock(cookies);
+			issueVaultUnlock(cookies, ownerId);
 			return { entryId: created.id };
 		}
 
@@ -70,28 +73,32 @@ export const vaultActions = {
 			return fail(400, { message: INVALID });
 		}
 
-		const updated = await updateEntry(parsedId.data, parsed.data);
+		const updated = await updateEntry(ownerId, parsedId.data, parsed.data);
 		if (!updated.ok) {
-			return fail(400, { message: updated.error });
+			return fail(updated.reason === 'missing' ? 404 : 400, { message: updated.error });
 		}
 
-		issueVaultUnlock(cookies);
+		issueVaultUnlock(cookies, ownerId);
 		return { saved: true, entryId: parsedId.data };
 	},
 
-	deleteEntry: async ({ request }: RequestEvent) => {
+	deleteEntry: async ({ request, locals }: RequestEvent) => {
 		// Ungated on purpose (grill decision 2): deleting ciphertext never shows plaintext.
 		const id = requiredId(await request.formData());
 		if (!id) {
 			return fail(400, { message: INVALID });
 		}
 
-		await deleteEntry(id);
+		if (!(await deleteEntry(requireUserId(locals), id))) {
+			return fail(404, { message: MISSING });
+		}
+
 		return { deleted: true };
 	},
 
-	revealEntry: async ({ request, cookies }: RequestEvent) => {
-		if (!isVaultUnlocked(cookies)) {
+	revealEntry: async ({ request, cookies, locals }: RequestEvent) => {
+		const ownerId = requireUserId(locals);
+		if (!isVaultUnlocked(cookies, ownerId)) {
 			return fail(401, { message: LOCKED });
 		}
 
@@ -100,12 +107,12 @@ export const vaultActions = {
 			return fail(400, { message: INVALID });
 		}
 
-		const revealed = await revealEntry(id);
+		const revealed = await revealEntry(ownerId, id);
 		if (!revealed.ok) {
 			return fail(revealed.reason === 'missing' ? 404 : 400, { message: revealed.error });
 		}
 
-		issueVaultUnlock(cookies);
+		issueVaultUnlock(cookies, ownerId);
 		return { secret: revealed.secret, notes: revealed.notes };
 	}
 };

@@ -12,7 +12,7 @@
 	let { bookmarks }: { bookmarks: BookmarkItem[] } = $props();
 </script>
 
-<WidgetCard title="Favorite bookmarks" href="/bookmarks?favorite=true">
+<WidgetCard title="Favorite bookmarks" href="/bookmarks?favorite=true" icon={Star}>
 	{#if bookmarks.length === 0}
 		<div class="flex flex-col items-center gap-3 py-4 text-center">
 			<Star class="size-6 text-muted-foreground" />

@@ -13,19 +13,25 @@ import {
 	setNotePinned,
 	updateNote
 } from '$lib/server/notes';
+import { requireUserId } from '$lib/server/session';
 import { listTags } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
 const pinnedSchema = z.enum(['true', 'false']);
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, locals }) => {
+	const ownerId = requireUserId(locals);
 	const { noteId, q } = parseNoteSearch(url.searchParams);
-	const [notes, folders, tags] = await Promise.all([listNotes(q), listFolders(), listTags()]);
+	const [notes, folders, tags] = await Promise.all([
+		listNotes(ownerId, q),
+		listFolders(ownerId),
+		listTags(ownerId)
+	]);
 
 	// The selected note is normally in the list; an active search can exclude it,
 	// so the editor keeps its note by fetching it separately (deep links too).
 	const activeNote = noteId
-		? (notes.find((item) => item.id === noteId) ?? (await getNote(noteId)))
+		? (notes.find((item) => item.id === noteId) ?? (await getNote(ownerId, noteId)))
 		: null;
 
 	return { q, notes, activeNote, folders, tags };
@@ -34,16 +40,18 @@ export const load: PageServerLoad = async ({ url }) => {
 export const actions: Actions = {
 	...folderActions,
 
-	createNote: async ({ request }) => {
+	createNote: async ({ request, locals }) => {
+		const ownerId = requireUserId(locals);
 		const folderId = optionalId(await request.formData(), 'folderId');
-		if (folderId && !(await folderExists(folderId))) {
+		if (folderId && !(await folderExists(ownerId, folderId))) {
 			return fail(400, { message: 'That folder no longer exists. Pick another one.' });
 		}
 
-		return { noteId: await createNote(folderId) };
+		return { noteId: await createNote(ownerId, folderId) };
 	},
 
-	saveNote: async ({ request }) => {
+	saveNote: async ({ request, locals }) => {
+		const ownerId = requireUserId(locals);
 		const formData = await request.formData();
 		const id = requiredId(formData);
 		if (!id) {
@@ -63,11 +71,11 @@ export const actions: Actions = {
 
 		// An editor that still points at a folder deleted elsewhere must fail cleanly
 		// instead of tripping the foreign key on write.
-		if (parsed.data.folderId && !(await folderExists(parsed.data.folderId))) {
+		if (parsed.data.folderId && !(await folderExists(ownerId, parsed.data.folderId))) {
 			return fail(400, { message: 'That folder no longer exists. Pick another one.' });
 		}
 
-		const savedAt = await updateNote(id, parsed.data);
+		const savedAt = await updateNote(ownerId, id, parsed.data);
 		if (!savedAt) {
 			return fail(404, { message: 'This note no longer exists.' });
 		}
@@ -75,17 +83,20 @@ export const actions: Actions = {
 		return { saved: true, savedAt: savedAt.toISOString() };
 	},
 
-	deleteNote: async ({ request }) => {
+	deleteNote: async ({ request, locals }) => {
 		const id = requiredId(await request.formData());
 		if (!id) {
 			return fail(400, { message: 'Invalid note.' });
 		}
 
-		await deleteNote(id);
+		if (!(await deleteNote(requireUserId(locals), id))) {
+			return fail(404, { message: 'This note no longer exists.' });
+		}
+
 		return { deleted: true };
 	},
 
-	togglePin: async ({ request }) => {
+	togglePin: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const id = requiredId(formData);
 		const pinned = pinnedSchema.safeParse(text(formData, 'pinned'));
@@ -93,7 +104,10 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid note.' });
 		}
 
-		await setNotePinned(id, pinned.data === 'true');
+		if (!(await setNotePinned(requireUserId(locals), id, pinned.data === 'true'))) {
+			return fail(404, { message: 'This note no longer exists.' });
+		}
+
 		return { toggled: true };
 	}
 };

@@ -62,9 +62,9 @@ describe('noteSnippet', () => {
 		);
 	});
 
-	test('truncates at 80 characters with an ellipsis', () => {
-		const snippet = noteSnippet('a'.repeat(100));
-		expect(snippet).toBe(`${'a'.repeat(80)}…`);
+	test('truncates at 160 characters with an ellipsis', () => {
+		const snippet = noteSnippet('a'.repeat(200));
+		expect(snippet).toBe(`${'a'.repeat(160)}…`);
 	});
 
 	test('stays short for short bodies and empty bodies', () => {

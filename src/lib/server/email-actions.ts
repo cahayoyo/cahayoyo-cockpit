@@ -3,11 +3,12 @@ import { emailFormSchema, emailStatusSchema } from '$lib/emails/schemas';
 import { dbIdSchema } from '$lib/ids';
 import { createEmail, deleteEmail, setEmailStatus, updateEmail } from './emails';
 import { optionalId, requiredId, text } from './form-data';
+import { requireUserId } from './session';
 
 // Emails form actions: one implementation for the emails page — the
 // emailActions counterpart of taskActions/folderActions.
 export const emailActions = {
-	saveEmail: async ({ request }: RequestEvent) => {
+	saveEmail: async ({ request, locals }: RequestEvent) => {
 		const formData = await request.formData();
 		const parsed = emailFormSchema.safeParse({
 			address: text(formData, 'address'),
@@ -25,7 +26,7 @@ export const emailActions = {
 		// No id: the dialog is creating; otherwise it edits that record.
 		const id = text(formData, 'id');
 		if (id === '') {
-			const created = await createEmail(parsed.data);
+			const created = await createEmail(requireUserId(locals), parsed.data);
 			if (!created.ok) {
 				return fail(400, { message: created.error });
 			}
@@ -38,15 +39,15 @@ export const emailActions = {
 			return fail(400, { message: 'Invalid address.' });
 		}
 
-		const updated = await updateEmail(parsedId.data, parsed.data);
+		const updated = await updateEmail(requireUserId(locals), parsedId.data, parsed.data);
 		if (!updated.ok) {
-			return fail(400, { message: updated.error });
+			return fail(updated.reason === 'missing' ? 404 : 400, { message: updated.error });
 		}
 
 		return { saved: true, emailId: parsedId.data };
 	},
 
-	setEmailStatus: async ({ request }: RequestEvent) => {
+	setEmailStatus: async ({ request, locals }: RequestEvent) => {
 		const formData = await request.formData();
 		const id = requiredId(formData);
 		const status = emailStatusSchema.safeParse(text(formData, 'status'));
@@ -54,20 +55,23 @@ export const emailActions = {
 			return fail(400, { message: 'Invalid address.' });
 		}
 
-		if (!(await setEmailStatus(id, status.data))) {
+		if (!(await setEmailStatus(requireUserId(locals), id, status.data))) {
 			return fail(404, { message: 'This address no longer exists.' });
 		}
 
 		return { updated: true };
 	},
 
-	deleteEmail: async ({ request }: RequestEvent) => {
+	deleteEmail: async ({ request, locals }: RequestEvent) => {
 		const id = requiredId(await request.formData());
 		if (!id) {
 			return fail(400, { message: 'Invalid address.' });
 		}
 
-		await deleteEmail(id);
+		if (!(await deleteEmail(requireUserId(locals), id))) {
+			return fail(404, { message: 'This address no longer exists.' });
+		}
+
 		return { deleted: true };
 	}
 };

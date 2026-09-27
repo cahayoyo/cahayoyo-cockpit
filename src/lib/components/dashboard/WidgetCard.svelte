@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Shared widget chrome: title, a "View all" link into the full page, and the
 	// content slot. One card = one widget (DESIGN.md > Card).
-	import type { Snippet } from 'svelte';
+	import type { Component, Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import * as Card from '$lib/components/ui/card/index.js';
 
@@ -18,11 +18,13 @@
 	let {
 		title,
 		href,
+		icon,
 		linkLabel = 'View all',
 		children
 	}: {
 		title: string;
 		href: WidgetHref;
+		icon?: Component;
 		linkLabel?: string;
 		children: Snippet;
 	} = $props();
@@ -30,7 +32,13 @@
 
 <Card.Card class="h-full">
 	<Card.Header>
-		<Card.Title>{title}</Card.Title>
+		<Card.Title class="flex items-center gap-2">
+			{#if icon}
+				{@const Icon = icon}
+				<Icon class="size-4" />
+			{/if}
+			{title}
+		</Card.Title>
 		<Card.Action>
 			<a
 				href={resolve(href)}

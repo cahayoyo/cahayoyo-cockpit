@@ -1,4 +1,4 @@
-import { asc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { likePattern, noteSnippet, sortNotes } from '$lib/notes/list';
 import type { NoteFormInput } from '$lib/notes/schemas';
 import { groupTagNames } from '$lib/tags';
@@ -29,15 +29,18 @@ async function tagsByNoteId(ids: string[]): Promise<Map<string, string[]>> {
 
 // A non-empty query is the global search: it matches titles and bodies
 // case-insensitively and ignores the folder scope.
-export async function listNotes(query = ''): Promise<NoteListItem[]> {
+export async function listNotes(ownerId: string, query = ''): Promise<NoteListItem[]> {
 	const term = query.trim();
 	const rows = await db
 		.select()
 		.from(note)
 		.where(
-			term === ''
-				? undefined
-				: or(ilike(note.title, likePattern(term)), ilike(note.body, likePattern(term)))
+			and(
+				eq(note.ownerId, ownerId),
+				term === ''
+					? undefined
+					: or(ilike(note.title, likePattern(term)), ilike(note.body, likePattern(term)))
+			)
 		);
 
 	const tagsByNote = await tagsByNoteId(rows.map((row) => row.id));
@@ -49,8 +52,12 @@ export async function listNotes(query = ''): Promise<NoteListItem[]> {
 	}));
 }
 
-export async function getNote(id: string): Promise<NoteListItem | null> {
-	const [row] = await db.select().from(note).where(eq(note.id, id));
+export async function getNote(ownerId: string, id: string): Promise<NoteListItem | null> {
+	const [row] = await db
+		.select()
+		.from(note)
+		.where(and(eq(note.id, id), eq(note.ownerId, ownerId)));
+
 	if (!row) {
 		return null;
 	}
@@ -60,17 +67,22 @@ export async function getNote(id: string): Promise<NoteListItem | null> {
 	return { ...row, tags: tagsByNote.get(id) ?? [], snippet: noteSnippet(row.body) };
 }
 
-export async function createNote(folderId: string | null = null): Promise<string> {
+export async function createNote(ownerId: string, folderId: string | null = null): Promise<string> {
 	const [row] = await db
 		.insert(note)
-		.values({ title: UNTITLED, body: '', folderId })
+		.values({ title: UNTITLED, body: '', folderId, ownerId })
 		.returning({ id: note.id });
 
 	return row.id;
 }
 
-async function attachTags(tx: Transaction, noteId: string, names: string[]): Promise<void> {
-	const tagIds = await ensureTagIds(tx, names);
+async function attachTags(
+	tx: Transaction,
+	ownerId: string,
+	noteId: string,
+	names: string[]
+): Promise<void> {
+	const tagIds = await ensureTagIds(tx, ownerId, names);
 	if (tagIds.length === 0) {
 		return;
 	}
@@ -78,12 +90,16 @@ async function attachTags(tx: Transaction, noteId: string, names: string[]): Pro
 	await tx.insert(noteTag).values(tagIds.map((tagId) => ({ noteId, tagId })));
 }
 
-export async function updateNote(id: string, input: NoteFormInput): Promise<Date | null> {
+export async function updateNote(
+	ownerId: string,
+	id: string,
+	input: NoteFormInput
+): Promise<Date | null> {
 	return db.transaction(async (tx) => {
 		const updated = await tx
 			.update(note)
 			.set({ title: input.title, body: input.body, folderId: input.folderId })
-			.where(eq(note.id, id))
+			.where(and(eq(note.id, id), eq(note.ownerId, ownerId)))
 			.returning({ id: note.id, updatedAt: note.updatedAt });
 
 		if (updated.length === 0) {
@@ -91,21 +107,33 @@ export async function updateNote(id: string, input: NoteFormInput): Promise<Date
 		}
 
 		await tx.delete(noteTag).where(eq(noteTag.noteId, id));
-		await attachTags(tx, id, input.tags);
+		await attachTags(tx, ownerId, id, input.tags);
 		return updated[0].updatedAt;
 	});
 }
 
-export async function setNotePinned(id: string, pinned: boolean): Promise<void> {
+export async function setNotePinned(
+	ownerId: string,
+	id: string,
+	pinned: boolean
+): Promise<boolean> {
 	// Pinning is metadata: it must not touch updated_at (the list's sort key),
 	// so unpinning does not jump the note back to the top of the list.
-	await db
+	const [updated] = await db
 		.update(note)
 		.set({ pinned, updatedAt: sql`${note.updatedAt}` })
-		.where(eq(note.id, id));
+		.where(and(eq(note.id, id), eq(note.ownerId, ownerId)))
+		.returning({ id: note.id });
+
+	return updated !== undefined;
 }
 
-export async function deleteNote(id: string): Promise<void> {
+export async function deleteNote(ownerId: string, id: string): Promise<boolean> {
 	// note_tag rows go with the note via ON DELETE CASCADE.
-	await db.delete(note).where(eq(note.id, id));
+	const [deleted] = await db
+		.delete(note)
+		.where(and(eq(note.id, id), eq(note.ownerId, ownerId)))
+		.returning({ id: note.id });
+
+	return deleted !== undefined;
 }

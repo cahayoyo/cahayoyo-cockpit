@@ -4,6 +4,7 @@ import Lock from '@lucide/svelte/icons/lock';
 import Mail from '@lucide/svelte/icons/mail';
 import NotebookPen from '@lucide/svelte/icons/notebook-pen';
 import Plane from '@lucide/svelte/icons/plane';
+import Settings from '@lucide/svelte/icons/settings';
 import SquareCheckBig from '@lucide/svelte/icons/square-check-big';
 import Wrench from '@lucide/svelte/icons/wrench';
 
@@ -15,7 +16,8 @@ export const NAV_ITEMS = [
 	{ href: '/tasks', label: 'Tasks', icon: SquareCheckBig },
 	{ href: '/toolkit', label: 'Toolkit', icon: Wrench },
 	{ href: '/emails', label: 'Emails', icon: Mail },
-	{ href: '/vault', label: 'Vault', icon: Lock }
+	{ href: '/vault', label: 'Vault', icon: Lock },
+	{ href: '/settings', label: 'Settings', icon: Settings }
 ] as const;
 
 export function isActivePath(path: string, href: string): boolean {

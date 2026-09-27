@@ -1,5 +1,9 @@
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { auth } from '$lib/server/auth';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema';
+import { ensureInbox } from '$lib/server/users';
 
 // Dev-only credentials: set them in .env (never committed) — see .env.example.
 const seedEnvSchema = z.object({
@@ -13,7 +17,8 @@ const seedEnvSchema = z.object({
 // database moves; anything unrecognized is refused.
 const DEV_DB_HOSTS = [/^localhost$/, /^127\.0\.0\.1$/, /\.neon\.tech$/];
 
-// The test account must never exist in production (CONSTITUTION, single-tenant).
+// The test account must never exist in production (CONSTITUTION v2.0.0: test
+// accounts are seeded only in dev databases).
 function assertDevDatabase(): void {
 	if (process.env.NODE_ENV === 'production') {
 		throw new Error('Refusing to seed: NODE_ENV=production.');
@@ -49,7 +54,7 @@ async function upsertSeedUser(
 	email: string,
 	password: string,
 	name: string
-): Promise<'created' | 'updated'> {
+): Promise<{ id: string; action: 'created' | 'updated' }> {
 	const existing = await ctx.internalAdapter.findUserByEmail(email, { includeAccounts: true });
 	const passwordHash = await ctx.password.hash(password);
 
@@ -59,7 +64,7 @@ async function upsertSeedUser(
 			{ method: 'email-password' }
 		);
 		await createCredentialAccount(user.id, passwordHash);
-		return 'created';
+		return { id: user.id, action: 'created' };
 	}
 
 	await ctx.internalAdapter.updateUser(existing.user.id, { name, emailVerified: true });
@@ -71,10 +76,22 @@ async function upsertSeedUser(
 	} else {
 		await createCredentialAccount(existing.user.id, passwordHash);
 	}
-	return 'updated';
+	return { id: existing.user.id, action: 'updated' };
+}
+
+// Roles are written through the schema directly so re-seeding stays idempotent;
+// the admin plugin equivalent (auth.api.createUser) would run the full
+// account-creation flow on every seed.
+async function setRole(userId: string, role: 'admin' | 'user'): Promise<void> {
+	await db.update(user).set({ role }).where(eq(user.id, userId));
 }
 
 const admin = await upsertSeedUser(env.SEED_ADMIN_EMAIL, env.SEED_ADMIN_PASSWORD, 'Admin');
-const test = await upsertSeedUser(env.SEED_TEST_EMAIL, env.SEED_TEST_PASSWORD, 'Test User');
+await setRole(admin.id, 'admin');
+await ensureInbox(admin.id);
 
-console.log(`seeded: admin account ${admin}, test account ${test}.`);
+const test = await upsertSeedUser(env.SEED_TEST_EMAIL, env.SEED_TEST_PASSWORD, 'Test User');
+await setRole(test.id, 'user');
+await ensureInbox(test.id);
+
+console.log(`seeded: admin account ${admin.action}, test account ${test.action}.`);

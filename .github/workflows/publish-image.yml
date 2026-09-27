@@ -1,9 +1,14 @@
 name: Publish the production image
 
+run-name: Publish Production Image - ${{ inputs.version }} - ${{ github.event_name }} - ${{ github.actor }}
+
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag for this deploy (e.g. v1.0.3)
+        required: true
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -47,8 +52,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # Skipped until #59 provisions the Dokploy application; a push to `main`
-      # always runs it once the secret exists.
+      # Production deploy: runs only when the workflow is dispatched on `main`
+      # (release flow), never from a feature branch.
       - name: Trigger the Dokploy deploy webhook
         if: github.ref == 'refs/heads/main' && env.DOKPLOY_DEPLOY_WEBHOOK != ''
         env:

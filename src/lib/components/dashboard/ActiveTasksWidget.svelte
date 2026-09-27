@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Dashboard widget: count chips for the four active statuses plus up to five
 	// items; the selection and counts come from $lib/dashboard/select.
+	import ListTodo from '@lucide/svelte/icons/list-todo';
 	import SquareCheckBig from '@lucide/svelte/icons/square-check-big';
 	import { resolve } from '$app/paths';
 	import type { TaskItem } from '$lib/components/tasks/types.js';
@@ -19,7 +20,7 @@
 	} = $props();
 </script>
 
-<WidgetCard title="Active tasks" href="/tasks?status=active">
+<WidgetCard title="Active tasks" href="/tasks?status=active" icon={ListTodo}>
 	<div class="space-y-3">
 		{#if tasks.length === 0}
 			<div class="flex flex-col items-center gap-3 py-4 text-center">

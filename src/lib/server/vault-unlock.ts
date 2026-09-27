@@ -14,15 +14,22 @@ type CookieWriter = Pick<Cookies, 'set' | 'delete'>;
 // Read once at boot; a missing secret fails fast (env.ts).
 const unlockSecret = envSchema.parse(process.env).BETTER_AUTH_SECRET;
 
-function signatureFor(timestamp: number, secret: string): string {
-	return createHmac('sha256', secret).update(String(timestamp)).digest('base64url');
+// The token carries the account id in its signature: an unlock issued to one
+// account never unlocks another account's vault in the same browser.
+function signatureFor(userId: string, timestamp: number, secret: string): string {
+	return createHmac('sha256', secret).update(`${userId}:${timestamp}`).digest('base64url');
 }
 
-export function signUnlockToken(timestamp: number, secret: string): string {
-	return `${timestamp}.${signatureFor(timestamp, secret)}`;
+export function signUnlockToken(userId: string, timestamp: number, secret: string): string {
+	return `${timestamp}.${signatureFor(userId, timestamp, secret)}`;
 }
 
-export function verifyUnlockToken(token: string, now: number, secret: string): boolean {
+export function verifyUnlockToken(
+	token: string,
+	userId: string,
+	now: number,
+	secret: string
+): boolean {
 	const separator = token.indexOf('.');
 	if (separator <= 0) {
 		return false;
@@ -34,7 +41,7 @@ export function verifyUnlockToken(token: string, now: number, secret: string): b
 	}
 
 	const received = Buffer.from(token.slice(separator + 1));
-	const expected = Buffer.from(signatureFor(timestamp, secret));
+	const expected = Buffer.from(signatureFor(userId, timestamp, secret));
 	if (received.length !== expected.length || !timingSafeEqual(received, expected)) {
 		return false;
 	}
@@ -43,18 +50,18 @@ export function verifyUnlockToken(token: string, now: number, secret: string): b
 	return age >= 0 && age <= VAULT_UNLOCK_IDLE_MS;
 }
 
-/** True while a valid, unexpired unlock cookie is present. */
-export function isVaultUnlocked(cookies: CookieReader, now = Date.now()): boolean {
+/** True while a valid, unexpired unlock cookie was issued to this account. */
+export function isVaultUnlocked(cookies: CookieReader, userId: string, now = Date.now()): boolean {
 	const token = cookies.get(VAULT_UNLOCK_COOKIE);
-	return token !== undefined && verifyUnlockToken(token, now, unlockSecret);
+	return token !== undefined && verifyUnlockToken(token, userId, now, unlockSecret);
 }
 
 /**
  * Issues (or refreshes) the unlock cookie. A session cookie with no max-age:
  * it dies with the browser, on idle expiry, and is cleared on logout.
  */
-export function issueVaultUnlock(cookies: CookieWriter, now = Date.now()): void {
-	cookies.set(VAULT_UNLOCK_COOKIE, signUnlockToken(now, unlockSecret), {
+export function issueVaultUnlock(cookies: CookieWriter, userId: string, now = Date.now()): void {
+	cookies.set(VAULT_UNLOCK_COOKIE, signUnlockToken(userId, now, unlockSecret), {
 		path: '/vault',
 		httpOnly: true,
 		sameSite: 'lax',

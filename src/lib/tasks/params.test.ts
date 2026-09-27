@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { INBOX_PROJECT_ID } from '$lib/ids';
 import { buildTaskSearch, parseTaskSearch, parseTaskView, type TaskSearch } from './params';
 
 const PROJECT_ID = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
 const TASK_ID = '9c858901-8a57-4509-9d5d-4b0f52b7f2a4';
+// The seeded Inbox project id (version 0): not a valid RFC 9562 UUID.
+const SEEDED_ID = '00000000-0000-0000-0000-000000000001';
 
 const defaults: TaskSearch = {
 	projectId: null,
@@ -33,8 +34,8 @@ describe('parseTaskSearch', () => {
 	});
 
 	test('keeps the seeded Inbox id (not an RFC 9562 UUID)', () => {
-		expect(parse(`project=${INBOX_PROJECT_ID}`).projectId).toBe(INBOX_PROJECT_ID);
-		expect(parse(`task=${INBOX_PROJECT_ID}`).taskId).toBe(INBOX_PROJECT_ID);
+		expect(parse(`project=${SEEDED_ID}`).projectId).toBe(SEEDED_ID);
+		expect(parse(`task=${SEEDED_ID}`).taskId).toBe(SEEDED_ID);
 	});
 
 	test('trims the query without changing its case', () => {

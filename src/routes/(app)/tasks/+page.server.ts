@@ -13,17 +13,19 @@ import {
 	renameProject
 } from '$lib/server/tasks';
 import { projectNameSchema } from '$lib/server/tasks-schemas';
+import { requireUserId } from '$lib/server/session';
 import { listTags } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
 // The page derives every view from one unfiltered task list: subtask progress,
 // parent labels and the board need tasks the active filters exclude. Filtering
 // and sorting reuse the same pure helpers the server layer uses.
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, locals }) => {
+	const ownerId = requireUserId(locals);
 	const [projects, tasks, tags] = await Promise.all([
-		listProjects(),
-		listTasks(ALL_TASKS),
-		listTags()
+		listProjects(ownerId),
+		listTasks(ownerId, ALL_TASKS),
+		listTags(ownerId)
 	]);
 
 	return {
@@ -41,16 +43,16 @@ export const load: PageServerLoad = async ({ url }) => {
 export const actions: Actions = {
 	...taskActions,
 
-	createProject: async ({ request }) => {
+	createProject: async ({ request, locals }) => {
 		const parsed = projectNameSchema.safeParse(text(await request.formData(), 'name'));
 		if (!parsed.success) {
 			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid project.' });
 		}
 
-		return { projectId: await createProject(parsed.data) };
+		return { projectId: await createProject(requireUserId(locals), parsed.data) };
 	},
 
-	renameProject: async ({ request }) => {
+	renameProject: async ({ request, locals }) => {
 		const formData = await request.formData();
 		const parsed = projectNameSchema.safeParse(text(formData, 'name'));
 		if (!parsed.success) {
@@ -62,22 +64,22 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid project.' });
 		}
 
-		if (!(await renameProject(id, parsed.data))) {
+		if (!(await renameProject(requireUserId(locals), id, parsed.data))) {
 			return fail(404, { message: 'This project no longer exists.' });
 		}
 
 		return { renamed: true };
 	},
 
-	deleteProject: async ({ request }) => {
+	deleteProject: async ({ request, locals }) => {
 		const id = requiredId(await request.formData());
 		if (!id) {
 			return fail(400, { message: 'Invalid project.' });
 		}
 
-		const deleted = await deleteProject(id);
+		const deleted = await deleteProject(requireUserId(locals), id);
 		if (!deleted.ok) {
-			return fail(409, { message: deleted.error });
+			return fail(deleted.reason === 'missing' ? 404 : 409, { message: deleted.error });
 		}
 
 		return { deleted: true };
