@@ -12,3 +12,17 @@ export function requireUserId(locals: App.Locals): string {
 
 	return id;
 }
+
+/**
+ * The super admin's id. The role is read from `locals.user` — the database
+ * session set by `hooks.server.ts` — never from request input. A non-admin
+ * caller gets 403 before any state change.
+ */
+export function requireAdmin(locals: App.Locals): string {
+	const id = requireUserId(locals);
+	if (locals.user?.role !== 'admin') {
+		error(403, 'Super admin only.');
+	}
+
+	return id;
+}

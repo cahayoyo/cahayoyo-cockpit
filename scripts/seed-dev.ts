@@ -1,8 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
-import { project, user } from '$lib/server/db/schema';
+import { user } from '$lib/server/db/schema';
+import { ensureInbox } from '$lib/server/users';
 
 // Dev-only credentials: set them in .env (never committed) — see .env.example.
 const seedEnvSchema = z.object({
@@ -78,24 +79,11 @@ async function upsertSeedUser(
 	return { id: existing.user.id, action: 'updated' };
 }
 
-// Roles are written through the schema directly: the Better Auth admin plugin
-// (which owns the role field) lands with the admin server layer (#87).
+// Roles are written through the schema directly so re-seeding stays idempotent;
+// the admin plugin equivalent (auth.api.createUser) would run the full
+// account-creation flow on every seed.
 async function setRole(userId: string, role: 'admin' | 'user'): Promise<void> {
 	await db.update(user).set({ role }).where(eq(user.id, userId));
-}
-
-// One Inbox per account (ADR-0005). The super admin's seeded Inbox already
-// exists after the backfill; the test account gets a fresh one.
-async function ensureInbox(ownerId: string): Promise<void> {
-	const [existing] = await db
-		.select({ id: project.id })
-		.from(project)
-		.where(and(eq(project.ownerId, ownerId), eq(project.isInbox, true)))
-		.limit(1);
-	if (existing) {
-		return;
-	}
-	await db.insert(project).values({ ownerId, name: 'Inbox', isInbox: true });
 }
 
 const admin = await upsertSeedUser(env.SEED_ADMIN_EMAIL, env.SEED_ADMIN_PASSWORD, 'Admin');
