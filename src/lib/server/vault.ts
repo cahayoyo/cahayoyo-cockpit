@@ -62,7 +62,7 @@ async function attachTags(
 	entryId: string,
 	names: string[]
 ): Promise<void> {
-	const tagIds = await ensureTagIds(tx, ownerId, names);
+	const tagIds = await ensureTagIds(tx, ownerId, 'vault', names);
 	if (tagIds.length === 0) {
 		return;
 	}

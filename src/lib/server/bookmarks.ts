@@ -42,7 +42,7 @@ async function attachTags(
 	bookmarkId: string,
 	names: string[]
 ): Promise<void> {
-	const tagIds = await ensureTagIds(tx, ownerId, names);
+	const tagIds = await ensureTagIds(tx, ownerId, 'bookmark', names);
 	if (tagIds.length === 0) {
 		return;
 	}

@@ -27,8 +27,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const filters = parseBookmarkSearch(url.searchParams);
 	const [bookmarks, folders, tags, media] = await Promise.all([
 		listBookmarks(ownerId),
-		listFolders(ownerId),
-		listTags(ownerId),
+		listFolders(ownerId, 'bookmark'),
+		listTags(ownerId, 'bookmark'),
 		listMedia(ownerId)
 	]);
 
@@ -48,7 +48,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 };
 
 export const actions: Actions = {
-	...folderActions,
+	...folderActions('bookmark'),
 
 	saveBookmark: async ({ request, locals }) => {
 		const ownerId = requireUserId(locals);
@@ -68,7 +68,7 @@ export const actions: Actions = {
 		}
 
 		// Folders and images from another account must be rejected as missing.
-		if (parsed.data.folderId && !(await folderExists(ownerId, parsed.data.folderId))) {
+		if (parsed.data.folderId && !(await folderExists(ownerId, parsed.data.folderId, 'bookmark'))) {
 			return fail(400, { message: 'That folder no longer exists. Pick another one.' });
 		}
 
