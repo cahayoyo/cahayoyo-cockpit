@@ -4,6 +4,7 @@
 	// returns a curated message on failure. Fields reset every time the dialog
 	// opens so a cancelled draft never leaks into the next create.
 	import { enhance } from '$app/forms';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { toast } from 'svelte-sonner';
 	import FormAlert from '$lib/components/FormAlert.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -20,6 +21,7 @@
 
 	let draft = $state<Draft>({ ...EMPTY });
 	let error = $state('');
+	let submitting = $state(false);
 	let synced = $state(false);
 
 	// Clear the draft on open (never on an unrelated parent re-render).
@@ -29,6 +31,7 @@
 		if (open) {
 			draft = { ...EMPTY };
 			error = '';
+			submitting = false;
 		}
 	});
 </script>
@@ -46,8 +49,10 @@
 			class="space-y-4"
 			method="post"
 			action="?/createUser"
-			use:enhance={() =>
-				async ({ result, update }) => {
+			use:enhance={() => {
+				submitting = true;
+				return async ({ result, update }) => {
+					submitting = false;
 					if (result.type === 'failure') {
 						error = failureMessage(result.data);
 						return;
@@ -57,7 +62,8 @@
 					toast.success('Account created');
 					open = false;
 					onsuccess?.();
-				}}
+				};
+			}}
 		>
 			{#if error}
 				<FormAlert message={error} />
@@ -111,7 +117,14 @@
 				>
 					Cancel
 				</Button>
-				<Button type="submit" class="max-sm:h-11">Create account</Button>
+				<Button type="submit" class="max-sm:h-11" disabled={submitting}>
+					{#if submitting}
+						<LoaderCircle class="size-4 animate-spin" />
+						<span class="sr-only">Creating account</span>
+					{:else}
+						Create account
+					{/if}
+				</Button>
 			</Dialog.Footer>
 		</form>
 	</Dialog.Content>

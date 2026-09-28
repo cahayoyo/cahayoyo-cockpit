@@ -5,7 +5,8 @@ import { db } from './db';
 import { project, user } from './db/schema';
 import { requireAdmin } from './session';
 import { canDeactivate } from './user-guards';
-import type { AccountListItem } from '$lib/users/types';
+import { ADMIN_ROLE, USER_ROLE } from '$lib/roles';
+import type { AccountListItem } from '$lib/users/types.js';
 
 export type AccountWriteResult =
 	{ ok: true } | { ok: false; reason: 'missing' | 'refused'; message: string };
@@ -24,7 +25,7 @@ function toListItem(row: AuthUserRow): AccountListItem {
 		id: row.id,
 		email: row.email,
 		name: row.name,
-		role: row.role ?? 'user',
+		role: row.role ?? USER_ROLE,
 		banned: row.banned ?? false,
 		createdAt: new Date(row.createdAt)
 	};
@@ -43,7 +44,7 @@ async function activeAdminCount(): Promise<number> {
 	const [row] = await db
 		.select({ value: count() })
 		.from(user)
-		.where(and(eq(user.role, 'admin'), eq(user.banned, false)));
+		.where(and(eq(user.role, ADMIN_ROLE), eq(user.banned, false)));
 
 	return row.value;
 }
@@ -77,7 +78,7 @@ export async function createUser(
 			email: input.email,
 			name: input.name,
 			password: input.password,
-			role: 'user',
+			role: USER_ROLE,
 			// Admin-created accounts skip the (disabled) public verification flow.
 			data: { emailVerified: true }
 		}

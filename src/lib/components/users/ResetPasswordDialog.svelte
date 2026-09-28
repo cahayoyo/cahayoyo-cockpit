@@ -4,6 +4,7 @@
 	// sessions (a reset owns them). Confirm-match is a deliberate client-only
 	// guard, same as the Settings page.
 	import { enhance } from '$app/forms';
+	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import { toast } from 'svelte-sonner';
 	import FormAlert from '$lib/components/FormAlert.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -27,6 +28,7 @@
 	let confirm = $state('');
 	let error = $state('');
 	let mismatch = $state(false);
+	let submitting = $state(false);
 	let syncedId = $state<string | null>(null);
 
 	// Reset the draft when the dialog opens or switches account.
@@ -40,6 +42,7 @@
 		confirm = '';
 		error = '';
 		mismatch = false;
+		submitting = false;
 	});
 </script>
 
@@ -67,8 +70,10 @@
 
 				mismatch = false;
 				error = '';
+				submitting = true;
 
 				return async ({ result, update }) => {
+					submitting = false;
 					if (result.type === 'failure') {
 						error = failureMessage(result.data);
 						return;
@@ -130,7 +135,14 @@
 				>
 					Cancel
 				</Button>
-				<Button type="submit" class="max-sm:h-11">Reset password</Button>
+				<Button type="submit" class="max-sm:h-11" disabled={submitting}>
+					{#if submitting}
+						<LoaderCircle class="size-4 animate-spin" />
+						<span class="sr-only">Resetting password</span>
+					{:else}
+						Reset password
+					{/if}
+				</Button>
 			</Dialog.Footer>
 		</form>
 	</Dialog.Content>

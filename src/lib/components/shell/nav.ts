@@ -8,6 +8,7 @@ import Settings from '@lucide/svelte/icons/settings';
 import SquareCheckBig from '@lucide/svelte/icons/square-check-big';
 import Users from '@lucide/svelte/icons/users';
 import Wrench from '@lucide/svelte/icons/wrench';
+import { ADMIN_ROLE } from '$lib/roles';
 
 export const NAV_ITEMS = [
 	{ href: '/', label: 'Cockpit', icon: Plane },
@@ -30,7 +31,7 @@ export type NavItem = (typeof NAV_ITEMS)[number];
  * the route itself refuses a non-admin server-side (`requireAdmin`).
  */
 export function visibleNavItems(role: string | null | undefined): readonly NavItem[] {
-	return NAV_ITEMS.filter((item) => !('adminOnly' in item) || role === 'admin');
+	return NAV_ITEMS.filter((item) => !('adminOnly' in item) || role === ADMIN_ROLE);
 }
 
 export function isActivePath(path: string, href: string): boolean {
