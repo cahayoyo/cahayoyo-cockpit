@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import { ADMIN_ROLE } from '$lib/roles';
 
 /**
  * The signed-in account's id. `hooks.server.ts` fences every app route behind a
@@ -20,7 +21,7 @@ export function requireUserId(locals: App.Locals): string {
  */
 export function requireAdmin(locals: App.Locals): string {
 	const id = requireUserId(locals);
-	if (locals.user?.role !== 'admin') {
+	if (locals.user?.role !== ADMIN_ROLE) {
 		error(403, 'Super admin only.');
 	}
 

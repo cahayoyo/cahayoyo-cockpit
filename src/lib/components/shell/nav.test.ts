@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { currentLabel, isActivePath } from './nav';
+import { currentLabel, isActivePath, visibleNavItems } from './nav';
 
 describe('isActivePath', () => {
 	test('matches the exact path', () => {
@@ -30,5 +30,21 @@ describe('currentLabel', () => {
 
 	test('falls back to Home for unknown paths', () => {
 		expect(currentLabel('/nope')).toBe('Cockpit');
+	});
+});
+
+describe('visibleNavItems', () => {
+	test('hides admin-only entries from regular accounts and signed-out roles', () => {
+		expect(visibleNavItems('user').some((item) => item.href === '/users')).toBe(false);
+		expect(visibleNavItems(null).some((item) => item.href === '/users')).toBe(false);
+	});
+
+	test('shows admin-only entries to the super admin', () => {
+		expect(visibleNavItems('admin').some((item) => item.href === '/users')).toBe(true);
+	});
+
+	test('keeps every shared entry for any role', () => {
+		expect(visibleNavItems('user').some((item) => item.href === '/settings')).toBe(true);
+		expect(visibleNavItems('admin').length).toBe(visibleNavItems('user').length + 1);
 	});
 });

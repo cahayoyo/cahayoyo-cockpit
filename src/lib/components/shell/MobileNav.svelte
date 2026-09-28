@@ -3,11 +3,12 @@
 	import { page } from '$app/state';
 	import * as Sheet from '$lib/components/ui/sheet/index.js';
 	import { cn } from '$lib/utils.js';
-	import { isActivePath, NAV_ITEMS } from './nav.js';
+	import { isActivePath, visibleNavItems } from './nav.js';
 
-	let { open = $bindable(false) }: { open?: boolean } = $props();
+	let { open = $bindable(false), role = null }: { open?: boolean; role?: string | null } = $props();
 
 	const path = $derived(page.url.pathname);
+	const items = $derived(visibleNavItems(role));
 </script>
 
 <Sheet.Root bind:open>
@@ -26,7 +27,7 @@
 			<Sheet.Title class="sr-only">Navigation</Sheet.Title>
 		</Sheet.Header>
 		<nav class="flex-1 space-y-1 px-2" aria-label="Main">
-			{#each NAV_ITEMS as item (item.href)}
+			{#each items as item (item.href)}
 				{@const active = isActivePath(path, item.href)}
 				<a
 					href={resolve(item.href)}
