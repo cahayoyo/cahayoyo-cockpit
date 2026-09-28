@@ -74,14 +74,51 @@ BEGIN
   FROM folder_clone fc
   WHERE f.parent_id = fc.orig AND f.kind = 'note' AND f.id <> fc.clone;
 END $$;--> statement-breakpoint
-UPDATE "tag" t SET kind =
-  CASE
-    WHEN EXISTS (SELECT 1 FROM bookmark_tag l WHERE l.tag_id = t.id) THEN 'bookmark'::tag_kind
-    WHEN EXISTS (SELECT 1 FROM note_tag l WHERE l.tag_id = t.id) THEN 'note'::tag_kind
-    WHEN EXISTS (SELECT 1 FROM task_tag l WHERE l.tag_id = t.id) THEN 'task'::tag_kind
-    WHEN EXISTS (SELECT 1 FROM vault_entry_tag l WHERE l.tag_id = t.id) THEN 'vault'::tag_kind
-  END;--> statement-breakpoint
-DELETE FROM "tag" WHERE kind IS NULL;--> statement-breakpoint
+DO $$
+DECLARE
+  rec record;
+  new_id uuid;
+BEGIN
+  -- Every (tag, module) usage, so a tag shared by two modules is split too.
+  CREATE TEMP TABLE tag_usage (tag_id uuid, kind tag_kind) ON COMMIT DROP;
+  INSERT INTO tag_usage
+    SELECT DISTINCT tag_id, 'bookmark'::tag_kind FROM bookmark_tag
+    UNION SELECT DISTINCT tag_id, 'note'::tag_kind FROM note_tag
+    UNION SELECT DISTINCT tag_id, 'task'::tag_kind FROM task_tag
+    UNION SELECT DISTINCT tag_id, 'vault'::tag_kind FROM vault_entry_tag;
+
+  -- The original row takes its first (lowest-precedence) usage kind.
+  UPDATE "tag" t SET kind = u.kind
+  FROM (
+    SELECT DISTINCT ON (tag_id) tag_id, kind
+    FROM tag_usage
+    ORDER BY tag_id,
+      CASE kind WHEN 'bookmark' THEN 1 WHEN 'note' THEN 2 WHEN 'task' THEN 3 ELSE 4 END
+  ) u
+  WHERE u.tag_id = t.id;
+
+  -- Clone the tag for each further module that used it.
+  CREATE TEMP TABLE tag_clone (tag_id uuid, kind tag_kind, clone uuid) ON COMMIT DROP;
+  FOR rec IN
+    SELECT tu.tag_id, tu.kind
+    FROM tag_usage tu JOIN "tag" t ON t.id = tu.tag_id
+    WHERE tu.kind <> t.kind
+  LOOP
+    INSERT INTO "tag" (owner_id, name, kind)
+    SELECT owner_id, name, rec.kind FROM "tag" WHERE id = rec.tag_id
+    RETURNING id INTO new_id;
+    INSERT INTO tag_clone VALUES (rec.tag_id, rec.kind, new_id);
+  END LOOP;
+
+  -- Point each module's link rows at the row for that module's kind.
+  UPDATE bookmark_tag l SET tag_id = tc.clone FROM tag_clone tc WHERE l.tag_id = tc.tag_id AND tc.kind = 'bookmark';
+  UPDATE note_tag l SET tag_id = tc.clone FROM tag_clone tc WHERE l.tag_id = tc.tag_id AND tc.kind = 'note';
+  UPDATE task_tag l SET tag_id = tc.clone FROM tag_clone tc WHERE l.tag_id = tc.tag_id AND tc.kind = 'task';
+  UPDATE vault_entry_tag l SET tag_id = tc.clone FROM tag_clone tc WHERE l.tag_id = tc.tag_id AND tc.kind = 'vault';
+
+  -- Tags nothing links to have no scope.
+  DELETE FROM "tag" WHERE kind IS NULL;
+END $$;--> statement-breakpoint
 ALTER TABLE "folder" ALTER COLUMN "kind" SET NOT NULL;--> statement-breakpoint
 ALTER TABLE "tag" ALTER COLUMN "kind" SET NOT NULL;--> statement-breakpoint
 DROP INDEX "folder_owner_id_idx";--> statement-breakpoint
