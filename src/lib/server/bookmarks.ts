@@ -22,7 +22,7 @@ export async function listBookmarks(ownerId: string): Promise<BookmarkListItem[]
 	const links = await db
 		.select({ id: bookmarkTag.bookmarkId, name: tag.name })
 		.from(bookmarkTag)
-		.innerJoin(tag, eq(bookmarkTag.tagId, tag.id))
+		.innerJoin(tag, and(eq(bookmarkTag.tagId, tag.id), eq(tag.kind, 'bookmark')))
 		.where(
 			inArray(
 				bookmarkTag.bookmarkId,
@@ -42,7 +42,7 @@ async function attachTags(
 	bookmarkId: string,
 	names: string[]
 ): Promise<void> {
-	const tagIds = await ensureTagIds(tx, ownerId, names);
+	const tagIds = await ensureTagIds(tx, ownerId, 'bookmark', names);
 	if (tagIds.length === 0) {
 		return;
 	}

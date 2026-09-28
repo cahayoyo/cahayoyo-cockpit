@@ -33,7 +33,7 @@ async function tagsByTaskId(ids: string[]): Promise<Map<string, string[]>> {
 	const links = await db
 		.select({ id: taskTag.taskId, name: tag.name })
 		.from(taskTag)
-		.innerJoin(tag, eq(taskTag.tagId, tag.id))
+		.innerJoin(tag, and(eq(taskTag.tagId, tag.id), eq(tag.kind, 'task')))
 		.where(inArray(taskTag.taskId, ids))
 		.orderBy(asc(tag.name));
 
@@ -137,7 +137,7 @@ async function attachTags(
 	taskId: string,
 	names: string[]
 ): Promise<void> {
-	const tagIds = await ensureTagIds(tx, ownerId, names);
+	const tagIds = await ensureTagIds(tx, ownerId, 'task', names);
 	if (tagIds.length === 0) {
 		return;
 	}

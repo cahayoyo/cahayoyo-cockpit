@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const [projects, tasks, tags] = await Promise.all([
 		listProjects(ownerId),
 		listTasks(ownerId, ALL_TASKS),
-		listTags(ownerId)
+		listTags(ownerId, 'task')
 	]);
 
 	return {

@@ -13,7 +13,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const [projects, tasks, tags] = await Promise.all([
 		listProjects(ownerId),
 		listTasks(ownerId, ALL_TASKS),
-		listTags(ownerId)
+		listTags(ownerId, 'task')
 	]);
 
 	return { projects, tasks, tags, today: todayIso() };

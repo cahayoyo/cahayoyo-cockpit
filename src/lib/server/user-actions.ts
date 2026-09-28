@@ -21,7 +21,7 @@ function failFromAuthError(error: unknown) {
 }
 
 // Super-admin account management (spec §6): same shape as taskActions /
-// folderActions — the users route (#89) spreads this object into its actions.
+// folderActions — the users route (#89) spreads these into its actions.
 export const userAdminActions = {
 	listUsers: async (event: RequestEvent) => {
 		return { users: await listUsers(event) };
