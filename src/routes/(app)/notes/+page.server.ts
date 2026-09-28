@@ -24,8 +24,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const { noteId, q } = parseNoteSearch(url.searchParams);
 	const [notes, folders, tags] = await Promise.all([
 		listNotes(ownerId, q),
-		listFolders(ownerId),
-		listTags(ownerId)
+		listFolders(ownerId, 'note'),
+		listTags(ownerId, 'note')
 	]);
 
 	// The selected note is normally in the list; an active search can exclude it,
@@ -38,12 +38,12 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 };
 
 export const actions: Actions = {
-	...folderActions,
+	...folderActions('note'),
 
 	createNote: async ({ request, locals }) => {
 		const ownerId = requireUserId(locals);
 		const folderId = optionalId(await request.formData(), 'folderId');
-		if (folderId && !(await folderExists(ownerId, folderId))) {
+		if (folderId && !(await folderExists(ownerId, folderId, 'note'))) {
 			return fail(400, { message: 'That folder no longer exists. Pick another one.' });
 		}
 
@@ -71,7 +71,7 @@ export const actions: Actions = {
 
 		// An editor that still points at a folder deleted elsewhere must fail cleanly
 		// instead of tripping the foreign key on write.
-		if (parsed.data.folderId && !(await folderExists(ownerId, parsed.data.folderId))) {
+		if (parsed.data.folderId && !(await folderExists(ownerId, parsed.data.folderId, 'note'))) {
 			return fail(400, { message: 'That folder no longer exists. Pick another one.' });
 		}
 

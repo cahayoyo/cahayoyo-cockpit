@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ cookies, locals }) => {
 	// stay client-side: the page derives them from the URL.
 	return {
 		entries: await listVaultEntries(ownerId),
-		tags: await listTags(ownerId),
+		tags: await listTags(ownerId, 'vault'),
 		unlocked: isVaultUnlocked(cookies, ownerId)
 	};
 };

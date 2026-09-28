@@ -125,6 +125,12 @@ export const disposableEmailStatus = pgEnum('disposable_email_status', ['active'
 
 export const vaultEntryType = pgEnum('vault_entry_type', ['login', 'api_key', 'note']);
 
+// Folder trees and tag namespaces are per module, not shared: a folder belongs
+// to bookmarks or to notes, and a tag to exactly one of the four tagged modules.
+export const folderKind = pgEnum('folder_kind', ['bookmark', 'note']);
+
+export const tagKind = pgEnum('tag_kind', ['bookmark', 'note', 'task', 'vault']);
+
 export const media = pgTable(
 	'media',
 	{
@@ -152,9 +158,11 @@ export const folder = pgTable(
 		// Virtual-root tree: top-level folders have parent_id NULL; deleting a folder
 		// cascades to its subtree while contained bookmarks are unfiled via SET NULL.
 		parentId: uuid('parent_id').references((): AnyPgColumn => folder.id, { onDelete: 'cascade' }),
+		// Which module's tree this folder lives in (bookmarks and notes never share).
+		kind: folderKind('kind').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
-	(table) => [index('folder_owner_id_idx').on(table.ownerId)]
+	(table) => [index('folder_owner_kind_idx').on(table.ownerId, table.kind)]
 );
 
 export const bookmark = pgTable(
@@ -292,11 +300,13 @@ export const tag = pgTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
+		// Tag namespaces are per module: the same name can exist once per kind.
+		kind: tagKind('kind').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
 	(table) => [
-		index('tag_owner_id_idx').on(table.ownerId),
-		unique('tag_owner_name_unique').on(table.ownerId, table.name)
+		index('tag_owner_kind_idx').on(table.ownerId, table.kind),
+		unique('tag_owner_kind_name_unique').on(table.ownerId, table.kind, table.name)
 	]
 );
 
