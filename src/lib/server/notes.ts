@@ -20,7 +20,7 @@ async function tagsByNoteId(ids: string[]): Promise<Map<string, string[]>> {
 	const links = await db
 		.select({ id: noteTag.noteId, name: tag.name })
 		.from(noteTag)
-		.innerJoin(tag, eq(noteTag.tagId, tag.id))
+		.innerJoin(tag, and(eq(noteTag.tagId, tag.id), eq(tag.kind, 'note')))
 		.where(inArray(noteTag.noteId, ids))
 		.orderBy(asc(tag.name));
 

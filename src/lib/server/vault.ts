@@ -42,7 +42,7 @@ export async function listVaultEntries(ownerId: string): Promise<VaultEntryItem[
 	const links = await db
 		.select({ id: vaultEntryTag.vaultEntryId, name: tag.name })
 		.from(vaultEntryTag)
-		.innerJoin(tag, eq(vaultEntryTag.tagId, tag.id))
+		.innerJoin(tag, and(eq(vaultEntryTag.tagId, tag.id), eq(tag.kind, 'vault')))
 		.where(
 			inArray(
 				vaultEntryTag.vaultEntryId,
