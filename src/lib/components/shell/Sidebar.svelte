@@ -2,12 +2,15 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { cn } from '$lib/utils.js';
-	import { isActivePath, NAV_ITEMS } from './nav.js';
+	import { isActivePath, visibleNavItems } from './nav.js';
 
 	let {
 		expanded = $bindable(true),
-		hovering = $bindable(false)
-	}: { expanded?: boolean; hovering?: boolean } = $props();
+		hovering = $bindable(false),
+		role = null
+	}: { expanded?: boolean; hovering?: boolean; role?: string | null } = $props();
+
+	const items = $derived(visibleNavItems(role));
 
 	const path = $derived(page.url.pathname);
 	const isExpanded = $derived(expanded || hovering);
@@ -45,7 +48,7 @@
 	</div>
 
 	<nav class="flex flex-1 flex-col gap-1 overflow-y-auto p-2" aria-label="Main">
-		{#each NAV_ITEMS as item (item.href)}
+		{#each items as item (item.href)}
 			{@const active = isActivePath(path, item.href)}
 			<a
 				href={resolve(item.href)}

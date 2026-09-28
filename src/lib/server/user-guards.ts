@@ -1,3 +1,5 @@
+import { ADMIN_ROLE } from '$lib/roles';
+
 export type DeactivateDecision = { ok: true } | { ok: false; message: string };
 
 /**
@@ -16,7 +18,7 @@ export function canDeactivate(input: {
 		return { ok: false, message: 'You cannot deactivate your own account.' };
 	}
 
-	if (input.targetRole === 'admin' && !input.targetBanned && input.activeAdminCount <= 1) {
+	if (input.targetRole === ADMIN_ROLE && !input.targetBanned && input.activeAdminCount <= 1) {
 		return { ok: false, message: 'The last active admin cannot be deactivated.' };
 	}
 

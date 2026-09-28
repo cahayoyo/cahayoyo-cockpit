@@ -26,7 +26,7 @@
 </svelte:head>
 
 <div class="flex min-h-svh bg-background">
-	<Sidebar bind:expanded bind:hovering />
+	<Sidebar bind:expanded bind:hovering role={data.user?.role} />
 
 	<div class="flex min-w-0 flex-1 flex-col">
 		<TopBar
@@ -45,4 +45,4 @@
 	</div>
 </div>
 
-<MobileNav bind:open={navOpen} />
+<MobileNav bind:open={navOpen} role={data.user?.role} />
