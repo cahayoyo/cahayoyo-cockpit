@@ -5,15 +5,7 @@ import { db } from './db';
 import { project, user } from './db/schema';
 import { requireAdmin } from './session';
 import { canDeactivate } from './user-guards';
-
-export type AccountListItem = {
-	id: string;
-	email: string;
-	name: string;
-	role: string;
-	banned: boolean;
-	createdAt: Date;
-};
+import type { AccountListItem } from '$lib/users/types';
 
 export type AccountWriteResult =
 	{ ok: true } | { ok: false; reason: 'missing' | 'refused'; message: string };

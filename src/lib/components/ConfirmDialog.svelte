@@ -5,7 +5,7 @@
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
 	import { failureMessage } from '$lib/forms.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Button, type ButtonVariant } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 
 	let {
@@ -16,6 +16,7 @@
 		action,
 		fields,
 		successMessage,
+		variant = 'destructive',
 		onsuccess
 	}: {
 		open?: boolean;
@@ -25,6 +26,8 @@
 		action: string;
 		fields: Record<string, string>;
 		successMessage: string;
+		/** The confirm button style; destructive by default, override for non-lossy actions. */
+		variant?: ButtonVariant;
 		onsuccess?: () => void;
 	} = $props();
 
@@ -57,7 +60,7 @@
 
 			<Dialog.Footer>
 				<Button type="button" variant="secondary" onclick={() => (open = false)}>Cancel</Button>
-				<Button type="submit" variant="destructive">{confirmLabel}</Button>
+				<Button type="submit" {variant}>{confirmLabel}</Button>
 			</Dialog.Footer>
 		</form>
 	</Dialog.Content>
