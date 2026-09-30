@@ -3,8 +3,9 @@ import { and, count, eq } from 'drizzle-orm';
 import { auth } from './auth';
 import { db } from './db';
 import { project, user } from './db/schema';
+import { collectOwnerMediaPaths, deleteMediaObjects } from './media';
 import { requireAdmin } from './session';
-import { canDeactivate } from './user-guards';
+import { canDeactivate, canDelete } from './user-guards';
 import { ADMIN_ROLE, USER_ROLE } from '$lib/roles';
 import type { AccountListItem } from '$lib/users/types.js';
 
@@ -151,6 +152,48 @@ export async function resetUserPassword(
 		body: { userId: input.userId },
 		headers: event.request.headers
 	});
+
+	return { ok: true };
+}
+
+/**
+ * Permanently delete an account and every row it owns (spec §6, amended
+ * 2026-09-28). The media library is purged first (rows + R2 objects); the DB
+ * cascade then removes the account, its sessions, and the rest of its data.
+ * Self-deletion and deleting the last active admin are refused.
+ */
+export async function deleteUser(
+	event: RequestEvent,
+	input: { userId: string }
+): Promise<AccountWriteResult> {
+	const callerId = requireAdmin(event.locals);
+	const target = await findAccount(input.userId);
+	if (!target) {
+		return { ok: false, reason: 'missing', message: 'That account no longer exists.' };
+	}
+
+	const decision = canDelete({
+		callerId,
+		targetId: input.userId,
+		targetRole: target.role,
+		targetBanned: target.banned,
+		activeAdminCount: await activeAdminCount()
+	});
+	if (!decision.ok) {
+		return { ok: false, reason: 'refused', message: decision.message };
+	}
+
+	// Collect the R2 paths (and clear the RESTRICT bookmark refs) before the
+	// cascade, then delete the objects only after the account is gone — a failed
+	// account delete must not leave the media half-deleted.
+	const mediaPaths = await collectOwnerMediaPaths(input.userId);
+
+	await auth.api.removeUser({
+		body: { userId: input.userId },
+		headers: event.request.headers
+	});
+
+	await deleteMediaObjects(mediaPaths);
 
 	return { ok: true };
 }

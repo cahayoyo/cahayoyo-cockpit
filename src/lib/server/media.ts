@@ -144,6 +144,33 @@ export async function deleteMedia(ownerId: string, id: string): Promise<DeleteMe
 	return { ok: true };
 }
 
+/**
+ * First step of an account's media purge (hard delete): clear the bookmark
+ * references and return the account's R2 storage paths. `bookmark.image_id` is
+ * `ON DELETE RESTRICT`, so the account-delete cascade needs those refs gone
+ * first; the media rows themselves stay until that cascade removes them (so a
+ * failed account delete leaves the media intact, not half-deleted). Call
+ * `deleteMediaObjects` with the returned paths afterwards. Note bodies keep no
+ * FK to media, so nothing else blocks.
+ */
+export async function collectOwnerMediaPaths(ownerId: string): Promise<string[]> {
+	await db.update(bookmark).set({ imageId: null }).where(eq(bookmark.ownerId, ownerId));
+
+	const rows = await db
+		.select({ storagePath: media.storagePath })
+		.from(media)
+		.where(eq(media.ownerId, ownerId));
+
+	return rows.map((row) => row.storagePath);
+}
+
+/** Second step of an account's media purge: delete the R2 objects by path. */
+export async function deleteMediaObjects(paths: string[]): Promise<void> {
+	for (const path of paths) {
+		await s3.file(path).delete();
+	}
+}
+
 export async function getMediaFile(
 	ownerId: string,
 	id: string

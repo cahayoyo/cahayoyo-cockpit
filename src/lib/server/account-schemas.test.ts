@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
 	changePasswordSchema,
 	createUserSchema,
+	deleteUserSchema,
 	resetUserPasswordSchema,
 	setUserActiveSchema
 } from './account-schemas';
@@ -90,5 +91,15 @@ describe('resetUserPasswordSchema', () => {
 		expect(
 			resetUserPasswordSchema.safeParse({ userId: USER_ID, newPassword: 'short' }).success
 		).toBe(false);
+	});
+});
+
+describe('deleteUserSchema', () => {
+	test('accepts a valid id', () => {
+		expect(deleteUserSchema.parse({ userId: USER_ID })).toEqual({ userId: USER_ID });
+	});
+
+	test('rejects a malformed id', () => {
+		expect(deleteUserSchema.safeParse({ userId: 'nope' }).success).toBe(false);
 	});
 });
