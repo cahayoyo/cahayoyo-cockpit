@@ -36,3 +36,7 @@ export const resetUserPasswordSchema = z.object({
 	userId: dbIdSchema,
 	newPassword: passwordSchema
 });
+
+export const deleteUserSchema = z.object({
+	userId: dbIdSchema
+});

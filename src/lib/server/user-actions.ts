@@ -1,8 +1,13 @@
 import { fail, type RequestEvent } from '@sveltejs/kit';
 import { isAPIError } from 'better-auth/api';
-import { createUserSchema, resetUserPasswordSchema, setUserActiveSchema } from './account-schemas';
+import {
+	createUserSchema,
+	deleteUserSchema,
+	resetUserPasswordSchema,
+	setUserActiveSchema
+} from './account-schemas';
 import { text } from './form-data';
-import { createUser, listUsers, resetUserPassword, setUserActive } from './users';
+import { createUser, deleteUser, listUsers, resetUserPassword, setUserActive } from './users';
 
 // Expected auth failures become form failures with curated messages; the raw
 // Better Auth detail only reaches the server log (CODE_STANDARDS §5).
@@ -89,6 +94,25 @@ export const userAdminActions = {
 			}
 
 			return { reset: true };
+		} catch (error) {
+			return failFromAuthError(error);
+		}
+	},
+
+	deleteUser: async (event: RequestEvent) => {
+		const formData = await event.request.formData();
+		const parsed = deleteUserSchema.safeParse({ userId: text(formData, 'userId') });
+		if (!parsed.success) {
+			return fail(400, { message: parsed.error.issues[0]?.message ?? 'Invalid account.' });
+		}
+
+		try {
+			const result = await deleteUser(event, parsed.data);
+			if (!result.ok) {
+				return fail(result.reason === 'missing' ? 404 : 400, { message: result.message });
+			}
+
+			return { deleted: true };
 		} catch (error) {
 			return failFromAuthError(error);
 		}
