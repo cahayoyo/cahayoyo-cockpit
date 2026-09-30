@@ -1,7 +1,8 @@
 <script lang="ts">
 	// Users page (#89): the super admin lists accounts and creates, deactivates/
-	// reactivates, or resets their passwords. Every mutation runs through the
-	// shared super-admin actions; the load above refuses non-admins server-side.
+	// reactivates, resets their passwords, or deletes them. Every mutation runs
+	// through the shared super-admin actions; the load above refuses non-admins
+	// server-side.
 	import UsersIcon from '@lucide/svelte/icons/users';
 	import { navigating } from '$app/state';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
@@ -27,6 +28,9 @@
 	let toggleOpen = $state(false);
 	let toggleTarget = $state<AccountListItem | null>(null);
 
+	let deleteOpen = $state(false);
+	let deleteTarget = $state<AccountListItem | null>(null);
+
 	function askReset(account: AccountListItem): void {
 		resetTarget = account;
 		resetOpen = true;
@@ -35,6 +39,11 @@
 	function askToggle(account: AccountListItem): void {
 		toggleTarget = account;
 		toggleOpen = true;
+	}
+
+	function askDelete(account: AccountListItem): void {
+		deleteTarget = account;
+		deleteOpen = true;
 	}
 
 	// The row menu picks the intent; the confirm dialog posts the change.
@@ -104,7 +113,13 @@
 						</td>
 						<td class="px-3 py-2">
 							<div class="flex justify-end">
-								<UserMenu {account} onreset={askReset} ontoggle={askToggle} />
+								<UserMenu
+									{account}
+									currentUserId={data.user?.id}
+									onreset={askReset}
+									ontoggle={askToggle}
+									ondelete={askDelete}
+								/>
 							</div>
 						</td>
 					</tr>
@@ -130,4 +145,18 @@
 	variant={toggleTarget?.banned ? 'secondary' : 'destructive'}
 	successMessage={toggleSuccess}
 	onsuccess={() => (toggleTarget = null)}
+/>
+
+<ConfirmDialog
+	bind:open={deleteOpen}
+	title="Delete account"
+	description={deleteTarget
+		? `"${deleteTarget.email}" and all of its data will be permanently deleted. This cannot be undone.`
+		: ''}
+	confirmLabel="Delete account"
+	action="?/deleteUser"
+	fields={deleteTarget ? { userId: deleteTarget.id } : {}}
+	confirmPhrase={deleteTarget?.email ?? ''}
+	successMessage="Account deleted"
+	onsuccess={() => (deleteTarget = null)}
 />
