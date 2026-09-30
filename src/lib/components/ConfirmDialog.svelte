@@ -7,6 +7,8 @@
 	import { failureMessage } from '$lib/forms.js';
 	import { Button, type ButtonVariant } from '$lib/components/ui/button/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 
 	let {
 		open = $bindable(false),
@@ -17,6 +19,7 @@
 		fields,
 		successMessage,
 		variant = 'destructive',
+		confirmPhrase = '',
 		onsuccess
 	}: {
 		open?: boolean;
@@ -28,8 +31,17 @@
 		successMessage: string;
 		/** The confirm button style; destructive by default, override for non-lossy actions. */
 		variant?: ButtonVariant;
+		/** When set, the confirm stays disabled until this exact text is typed (irreversible actions). */
+		confirmPhrase?: string;
 		onsuccess?: () => void;
 	} = $props();
+
+	let typed = $state('');
+
+	// Clear the typed confirmation whenever the dialog closes.
+	$effect(() => {
+		if (!open) typed = '';
+	});
 
 	const submit: SubmitFunction =
 		() =>
@@ -58,9 +70,26 @@
 				<input type="hidden" {name} {value} />
 			{/each}
 
+			{#if confirmPhrase}
+				<div class="space-y-2">
+					<Label for="confirm-phrase">
+						Type <span class="font-medium text-foreground">{confirmPhrase}</span> to confirm
+					</Label>
+					<Input
+						id="confirm-phrase"
+						bind:value={typed}
+						autocomplete="off"
+						autocapitalize="off"
+						spellcheck={false}
+					/>
+				</div>
+			{/if}
+
 			<Dialog.Footer>
 				<Button type="button" variant="secondary" onclick={() => (open = false)}>Cancel</Button>
-				<Button type="submit" {variant}>{confirmLabel}</Button>
+				<Button type="submit" {variant} disabled={confirmPhrase !== '' && typed !== confirmPhrase}>
+					{confirmLabel}
+				</Button>
 			</Dialog.Footer>
 		</form>
 	</Dialog.Content>

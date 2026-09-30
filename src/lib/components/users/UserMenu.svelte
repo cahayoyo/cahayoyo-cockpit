@@ -1,6 +1,7 @@
 <script lang="ts">
-	// Kebab actions for one account row: reset password, and deactivate or
-	// reactivate. The page owns the dialogs; this only raises the intent.
+	// Kebab actions for one account row: reset password, deactivate or
+	// reactivate, and (for another account) delete. The page owns the dialogs;
+	// this only raises the intent.
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
@@ -8,12 +9,16 @@
 
 	let {
 		account,
+		currentUserId,
 		onreset,
-		ontoggle
+		ontoggle,
+		ondelete
 	}: {
 		account: AccountListItem;
+		currentUserId?: string;
 		onreset: (account: AccountListItem) => void;
 		ontoggle: (account: AccountListItem) => void;
+		ondelete: (account: AccountListItem) => void;
 	} = $props();
 </script>
 
@@ -40,6 +45,12 @@
 			{:else}
 				<DropdownMenu.Item variant="destructive" onSelect={() => ontoggle(account)}>
 					Deactivate
+				</DropdownMenu.Item>
+			{/if}
+			{#if account.id !== currentUserId}
+				<DropdownMenu.Separator />
+				<DropdownMenu.Item variant="destructive" onSelect={() => ondelete(account)}>
+					Delete
 				</DropdownMenu.Item>
 			{/if}
 		</DropdownMenu.Content>
