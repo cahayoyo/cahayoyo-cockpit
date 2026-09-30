@@ -1,6 +1,8 @@
 <script lang="ts">
 	// Confirmation dialog for destructive actions: an explicit verb on the button and the
-	// record's identity in the description (DESIGN.md > Dialog). Shared by Bookmarks and Notes.
+	// record's identity in the description (DESIGN.md > Dialog). Shared by Bookmarks, Notes,
+	// and the Users account-delete. An optional `confirmPhrase` gates an irreversible action
+	// behind a typed confirmation.
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import { enhance } from '$app/forms';
 	import { toast } from 'svelte-sonner';
