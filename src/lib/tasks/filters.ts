@@ -4,7 +4,7 @@ export const SORT_KEYS = ['due', 'priority', 'newest'] as const;
 
 export type SortKey = (typeof SORT_KEYS)[number];
 
-export const DUE_KEYS = ['any', 'overdue', 'today', 'today_or_overdue', 'next7', 'none'] as const;
+export const DUE_KEYS = ['any', 'overdue', 'today', 'next7', 'none'] as const;
 
 export type DueFilter = (typeof DUE_KEYS)[number];
 
@@ -54,8 +54,6 @@ function matchesDue(task: FilterableTask, due: DueFilter, today: string): boolea
 			return task.dueDate !== null && task.dueDate < today && task.status !== 'done';
 		case 'today':
 			return task.dueDate === today;
-		case 'today_or_overdue':
-			return task.dueDate !== null && task.dueDate <= today;
 		case 'next7':
 			return (
 				task.dueDate !== null &&

@@ -1,6 +1,5 @@
 // Pure selection helpers for the dashboard widgets (variant A): the route load
 // fetches the full lists once and these helpers derive the widget-sized slices.
-import { ALL_TASKS, filterTasks, type FilterableTask, type TaskFilters } from '$lib/tasks/filters';
 
 export const ACTIVE_TASK_STATUSES = [
 	'in_progress',
@@ -11,31 +10,18 @@ export const ACTIVE_TASK_STATUSES = [
 
 export type ActiveTaskStatus = (typeof ACTIVE_TASK_STATUSES)[number];
 
-const TODAY_LIMIT = 5;
 const ACTIVE_LIMIT = 5;
 const RECENT_NOTES_LIMIT = 5;
 const FAVORITE_BOOKMARKS_LIMIT = 6;
-
-// Same scope as the /today page: due today or overdue, Done excluded.
-const TODAY_FILTERS: TaskFilters = { ...ALL_TASKS, status: 'active', due: 'today_or_overdue' };
+const RECENT_VAULT_LIMIT = 5;
 
 type StatusTask = { status: string };
 type DatedNote = { updatedAt: Date };
+type DatedVaultEntry = { updatedAt: Date };
 type FavoriteBookmark = { favorite: boolean };
 
 function isActiveStatus(status: string): status is ActiveTaskStatus {
 	return (ACTIVE_TASK_STATUSES as readonly string[]).includes(status);
-}
-
-/** Due today or overdue and not Done, capped; `hidden` counts the rest. */
-export function selectTodayTasks<T extends FilterableTask>(
-	tasks: readonly T[],
-	today: string
-): { items: T[]; hidden: number } {
-	// The loaded list is already due-date sorted (listTasks), so filtering preserves the order.
-	const due = filterTasks(tasks, TODAY_FILTERS, today);
-
-	return { items: due.slice(0, TODAY_LIMIT), hidden: Math.max(0, due.length - TODAY_LIMIT) };
 }
 
 /** Tasks in the four active statuses: capped items plus a per-status count. */
@@ -67,4 +53,11 @@ export function selectRecentNotes<T extends DatedNote>(notes: readonly T[]): T[]
 /** Favorite bookmarks only, capped. */
 export function selectFavoriteBookmarks<T extends FavoriteBookmark>(bookmarks: readonly T[]): T[] {
 	return bookmarks.filter((bookmark) => bookmark.favorite).slice(0, FAVORITE_BOOKMARKS_LIMIT);
+}
+
+/** The most recently updated vault entries, capped. */
+export function selectRecentVault<T extends DatedVaultEntry>(entries: readonly T[]): T[] {
+	return [...entries]
+		.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+		.slice(0, RECENT_VAULT_LIMIT);
 }
