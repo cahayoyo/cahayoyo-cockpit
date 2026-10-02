@@ -8,7 +8,7 @@
 	// Internal routes the "View all" link opens; keeping them literal makes a
 	// typo in a caller fail the check (resolve() only accepts known routes).
 	type WidgetHref =
-		| '/today'
+		| '/vault'
 		| '/notes'
 		| '/bookmarks?favorite=true'
 		| '/tasks?status=active'

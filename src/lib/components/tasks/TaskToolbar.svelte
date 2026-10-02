@@ -52,12 +52,10 @@
 		any: 'Any due date',
 		overdue: 'Overdue',
 		today: 'Due today',
-		today_or_overdue: 'Due today or overdue',
 		next7: 'Next 7 days',
 		none: 'No due date'
 	};
 
-	// The toolbar omits `today_or_overdue`, which only the Today view uses.
 	const DUE_OPTIONS: readonly DueFilter[] = ['any', 'overdue', 'today', 'next7', 'none'];
 
 	function projectLabel(): string {
