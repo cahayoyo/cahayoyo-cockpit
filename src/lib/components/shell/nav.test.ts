@@ -3,22 +3,22 @@ import { currentLabel, isActivePath, visibleNavItems } from './nav';
 
 describe('isActivePath', () => {
 	test('matches the exact path', () => {
-		expect(isActivePath('/bookmarks', '/bookmarks')).toBe(true);
+		expect(isActivePath('/emails', '/emails')).toBe(true);
 		expect(isActivePath('/', '/')).toBe(true);
 	});
 
 	test('matches nested paths', () => {
-		expect(isActivePath('/bookmarks/123', '/bookmarks')).toBe(true);
+		expect(isActivePath('/emails/123', '/emails')).toBe(true);
 		expect(isActivePath('/tasks/kanban', '/tasks')).toBe(true);
 	});
 
 	test('does not match lookalike prefixes', () => {
-		expect(isActivePath('/bookmarks-old', '/bookmarks')).toBe(false);
+		expect(isActivePath('/emails-old', '/emails')).toBe(false);
 		expect(isActivePath('/notes2', '/notes')).toBe(false);
 	});
 
 	test('home only matches the root', () => {
-		expect(isActivePath('/bookmarks', '/')).toBe(false);
+		expect(isActivePath('/emails', '/')).toBe(false);
 	});
 });
 

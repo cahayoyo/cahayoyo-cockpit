@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { mediaUploadSchema } from '$lib/media/schemas';
 import { mediaObjectKey, type UploadMimeType } from '$lib/media/upload';
 import { db } from './db';
-import { bookmark, media } from './db/schema';
+import { media } from './db/schema';
 import { envSchema } from './env';
 
 const env = envSchema.parse(process.env);
@@ -54,23 +54,12 @@ export async function saveMedia(ownerId: string, file: File): Promise<SaveMediaR
 }
 
 /**
- * First step of an account's media purge (hard delete): clear the bookmark
- * references and return the account's R2 storage paths. `bookmark.image_id` is
- * `ON DELETE RESTRICT`, so the account-delete cascade needs those refs gone
- * first; the media rows themselves stay until that cascade removes them (so a
- * failed account delete leaves the media intact, not half-deleted). Call
- * `deleteMediaObjects` with the returned paths afterwards. Note bodies keep no
- * FK to media, so nothing else blocks. The bookmark pre-clear is temporary: it
- * goes away once the bookmark table is dropped.
- *
- * Trade-off: if the caller's `removeUser` then fails, the account survives but
- * its bookmarks have lost their image references. That is the least-destructive
- * partial state available — deleting the rows first would lose the media, and
- * the RESTRICT FK forbids keeping the references through the cascade.
+ * First step of an account's media purge (hard delete): return the account's R2
+ * storage paths. The media rows themselves stay until the account-delete cascade
+ * removes them, so a failed account delete leaves the media intact, not
+ * half-deleted. Call `deleteMediaObjects` with the returned paths afterwards.
  */
 export async function collectOwnerMediaPaths(ownerId: string): Promise<string[]> {
-	await db.update(bookmark).set({ imageId: null }).where(eq(bookmark.ownerId, ownerId));
-
 	const rows = await db
 		.select({ storagePath: media.storagePath })
 		.from(media)

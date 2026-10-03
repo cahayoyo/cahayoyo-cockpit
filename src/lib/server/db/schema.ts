@@ -126,10 +126,10 @@ export const disposableEmailStatus = pgEnum('disposable_email_status', ['active'
 export const vaultEntryType = pgEnum('vault_entry_type', ['login', 'api_key', 'note']);
 
 // Folder trees and tag namespaces are per module, not shared: a folder belongs
-// to bookmarks or to notes, and a tag to exactly one of the four tagged modules.
-export const folderKind = pgEnum('folder_kind', ['bookmark', 'note']);
+// to notes, and a tag to exactly one of the three tagged modules.
+export const folderKind = pgEnum('folder_kind', ['note']);
 
-export const tagKind = pgEnum('tag_kind', ['bookmark', 'note', 'task', 'vault']);
+export const tagKind = pgEnum('tag_kind', ['note', 'task', 'vault']);
 
 export const media = pgTable(
 	'media',
@@ -156,31 +156,13 @@ export const folder = pgTable(
 			.references(() => user.id, { onDelete: 'cascade' }),
 		name: text('name').notNull(),
 		// Virtual-root tree: top-level folders have parent_id NULL; deleting a folder
-		// cascades to its subtree while contained bookmarks are unfiled via SET NULL.
+		// cascades to its subtree while contained notes are unfiled via SET NULL.
 		parentId: uuid('parent_id').references((): AnyPgColumn => folder.id, { onDelete: 'cascade' }),
-		// Which module's tree this folder lives in (bookmarks and notes never share).
+		// Which module's tree this folder lives in.
 		kind: folderKind('kind').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
 	},
 	(table) => [index('folder_owner_kind_idx').on(table.ownerId, table.kind)]
-);
-
-export const bookmark = pgTable(
-	'bookmark',
-	{
-		id: uuid('id').primaryKey().defaultRandom(),
-		ownerId: text('owner_id')
-			.notNull()
-			.references(() => user.id, { onDelete: 'cascade' }),
-		title: text('title').notNull(),
-		url: text('url').notNull(),
-		description: text('description'),
-		favorite: boolean('favorite').default(false).notNull(),
-		imageId: uuid('image_id').references(() => media.id, { onDelete: 'restrict' }),
-		folderId: uuid('folder_id').references(() => folder.id, { onDelete: 'set null' }),
-		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull()
-	},
-	(table) => [index('bookmark_owner_id_idx').on(table.ownerId)]
 );
 
 export const note = pgTable(
@@ -308,19 +290,6 @@ export const tag = pgTable(
 		index('tag_owner_kind_idx').on(table.ownerId, table.kind),
 		unique('tag_owner_kind_name_unique').on(table.ownerId, table.kind, table.name)
 	]
-);
-
-export const bookmarkTag = pgTable(
-	'bookmark_tag',
-	{
-		bookmarkId: uuid('bookmark_id')
-			.notNull()
-			.references(() => bookmark.id, { onDelete: 'cascade' }),
-		tagId: uuid('tag_id')
-			.notNull()
-			.references(() => tag.id, { onDelete: 'cascade' })
-	},
-	(table) => [primaryKey({ columns: [table.bookmarkId, table.tagId] })]
 );
 
 export const noteTag = pgTable(
