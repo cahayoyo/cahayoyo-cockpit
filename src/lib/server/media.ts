@@ -1,10 +1,9 @@
 import { S3Client } from 'bun';
-import { and, count, desc, eq } from 'drizzle-orm';
-import { mediaUploadSchema } from '$lib/bookmarks/schemas';
-import { mediaObjectKey, type UploadMimeType } from '$lib/bookmarks/upload';
-import { extractMediaIds } from '$lib/notes/media-refs';
+import { and, eq } from 'drizzle-orm';
+import { mediaUploadSchema } from '$lib/media/schemas';
+import { mediaObjectKey, type UploadMimeType } from '$lib/media/upload';
 import { db } from './db';
-import { bookmark, media, note } from './db/schema';
+import { bookmark, media } from './db/schema';
 import { envSchema } from './env';
 
 const env = envSchema.parse(process.env);
@@ -20,13 +19,8 @@ const s3 = new S3Client({
 });
 
 export type MediaRow = typeof media.$inferSelect;
-export type MediaWithUsage = MediaRow & { usageCount: number };
 
 export type SaveMediaResult = { ok: true; media: MediaRow } | { ok: false; error: string };
-export type DeleteMediaResult =
-	| { ok: true }
-	| { ok: false; reason: 'missing' }
-	| { ok: false; reason: 'in-use'; bookmarkCount: number; noteCount: number };
 
 export async function saveMedia(ownerId: string, file: File): Promise<SaveMediaResult> {
 	const parsed = mediaUploadSchema.safeParse(file);
@@ -59,91 +53,6 @@ export async function saveMedia(ownerId: string, file: File): Promise<SaveMediaR
 	}
 }
 
-async function bookmarkUsageCount(ownerId: string, id: string): Promise<number> {
-	const [row] = await db
-		.select({ usageCount: count() })
-		.from(bookmark)
-		.where(and(eq(bookmark.imageId, id), eq(bookmark.ownerId, ownerId)));
-
-	return row?.usageCount ?? 0;
-}
-
-// Notes have no FK to media: usage is computed by scanning every note body for
-// the `/media/<id>` reference. Cost is bounded by the number of notes.
-async function noteUsageCounts(ownerId: string): Promise<Map<string, number>> {
-	const rows = await db.select({ body: note.body }).from(note).where(eq(note.ownerId, ownerId));
-	const counts = new Map<string, number>();
-
-	for (const row of rows) {
-		for (const id of extractMediaIds(row.body)) {
-			counts.set(id, (counts.get(id) ?? 0) + 1);
-		}
-	}
-
-	return counts;
-}
-
-export async function listMedia(ownerId: string): Promise<MediaWithUsage[]> {
-	const [rows, noteCounts] = await Promise.all([
-		db
-			.select({
-				id: media.id,
-				ownerId: media.ownerId,
-				originalName: media.originalName,
-				mimeType: media.mimeType,
-				sizeBytes: media.sizeBytes,
-				storagePath: media.storagePath,
-				createdAt: media.createdAt,
-				usageCount: count(bookmark.id)
-			})
-			.from(media)
-			.leftJoin(bookmark, and(eq(bookmark.imageId, media.id), eq(bookmark.ownerId, ownerId)))
-			.where(eq(media.ownerId, ownerId))
-			.groupBy(media.id)
-			.orderBy(desc(media.createdAt)),
-		noteUsageCounts(ownerId)
-	]);
-
-	return rows.map((row) => ({
-		...row,
-		usageCount: row.usageCount + (noteCounts.get(row.id) ?? 0)
-	}));
-}
-
-export async function mediaUsageCount(ownerId: string, id: string): Promise<number> {
-	const [bookmarks, notes] = await Promise.all([
-		bookmarkUsageCount(ownerId, id),
-		noteUsageCounts(ownerId)
-	]);
-	return bookmarks + (notes.get(id) ?? 0);
-}
-
-export async function deleteMedia(ownerId: string, id: string): Promise<DeleteMediaResult> {
-	// The note half of this guard is a body scan, so the check and the delete
-	// are not atomic (there is deliberately no FK between note and media): a note
-	// saved in the gap could keep a dangling reference. Acceptable at the current
-	// workspace scale; a DB-level constraint is the fix if that changes.
-	const [bookmarkCount, noteCounts] = await Promise.all([
-		bookmarkUsageCount(ownerId, id),
-		noteUsageCounts(ownerId)
-	]);
-	const noteCount = noteCounts.get(id) ?? 0;
-	if (bookmarkCount > 0 || noteCount > 0) {
-		return { ok: false, reason: 'in-use', bookmarkCount, noteCount };
-	}
-
-	const [row] = await db
-		.delete(media)
-		.where(and(eq(media.id, id), eq(media.ownerId, ownerId)))
-		.returning();
-	if (!row) {
-		return { ok: false, reason: 'missing' };
-	}
-
-	await s3.file(row.storagePath).delete();
-	return { ok: true };
-}
-
 /**
  * First step of an account's media purge (hard delete): clear the bookmark
  * references and return the account's R2 storage paths. `bookmark.image_id` is
@@ -151,7 +60,8 @@ export async function deleteMedia(ownerId: string, id: string): Promise<DeleteMe
  * first; the media rows themselves stay until that cascade removes them (so a
  * failed account delete leaves the media intact, not half-deleted). Call
  * `deleteMediaObjects` with the returned paths afterwards. Note bodies keep no
- * FK to media, so nothing else blocks.
+ * FK to media, so nothing else blocks. The bookmark pre-clear is temporary: it
+ * goes away once the bookmark table is dropped.
  *
  * Trade-off: if the caller's `removeUser` then fails, the account survives but
  * its bookmarks have lost their image references. That is the least-destructive
