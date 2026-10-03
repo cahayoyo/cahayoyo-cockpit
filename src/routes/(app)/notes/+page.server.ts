@@ -14,7 +14,7 @@ import {
 	updateNote
 } from '$lib/server/notes';
 import { requireUserId } from '$lib/server/session';
-import { listTags } from '$lib/server/tags';
+import { listTagNames } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
 const pinnedSchema = z.enum(['true', 'false']);
@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const [notes, folders, tags] = await Promise.all([
 		listNotes(ownerId, q),
 		listFolders(ownerId, 'note'),
-		listTags(ownerId, 'note')
+		listTagNames(ownerId)
 	]);
 
 	// The selected note is normally in the list; an active search can exclude it,

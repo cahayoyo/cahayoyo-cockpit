@@ -1,5 +1,5 @@
 import { requireUserId } from '$lib/server/session';
-import { listTags } from '$lib/server/tags';
+import { listTagNames } from '$lib/server/tags';
 import { listVaultEntries } from '$lib/server/vault';
 import { vaultActions } from '$lib/server/vault-actions';
 import { isVaultUnlocked } from '$lib/server/vault-unlock';
@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ cookies, locals }) => {
 	// stay client-side: the page derives them from the URL.
 	return {
 		entries: await listVaultEntries(ownerId),
-		tags: await listTags(ownerId, 'vault'),
+		tags: await listTagNames(ownerId),
 		unlocked: isVaultUnlocked(cookies, ownerId)
 	};
 };
