@@ -5,8 +5,8 @@ import { createFolder, deleteFolder, renameFolder, type FolderKind } from './fol
 import { saveMedia } from './media';
 import { requireUserId } from './session';
 
-// Folder + media form actions for a module that owns a folder tree (Bookmarks,
-// Notes): one factory, same validation and messages, scoped to the module's kind.
+// Folder + media form actions for a module that owns a folder tree (Notes): one
+// factory, same validation and messages, scoped to the module's kind.
 export function folderActions(kind: FolderKind) {
 	return {
 		createFolder: async ({ request, locals }: RequestEvent) => {

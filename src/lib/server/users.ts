@@ -183,9 +183,9 @@ export async function deleteUser(
 		return { ok: false, reason: 'refused', message: decision.message };
 	}
 
-	// Collect the R2 paths (and clear the RESTRICT bookmark refs) before the
-	// cascade, then delete the objects only after the account is gone — a failed
-	// account delete must not leave the media half-deleted.
+	// Collect the R2 paths before the cascade, then delete the objects only after
+	// the account is gone — a failed account delete must not leave the media
+	// half-deleted.
 	const mediaPaths = await collectOwnerMediaPaths(input.userId);
 
 	await auth.api.removeUser({
