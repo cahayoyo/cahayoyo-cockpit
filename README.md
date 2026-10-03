@@ -23,13 +23,14 @@ bun install
 cp .env.example .env   # then replace the placeholder values
 ```
 
-| Variable                                                                 | Purpose                                                                                 |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                                           | PostgreSQL connection string (Neon; pooled for the app, direct for migrations)          |
-| `BETTER_AUTH_SECRET`                                                     | Session signing secret (`openssl rand -base64 32`)                                      |
-| `VAULT_ENCRYPTION_KEY`                                                   | Vault AES-256-GCM key, base64 for exactly 32 bytes — never change it once entries exist |
-| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Private Cloudflare R2 bucket for media                                                  |
-| `SEED_ADMIN_*`, `SEED_TEST_*`                                            | Dev-only seed accounts (`bun run db:seed`) — never set in production                    |
+| Variable                                                                 | Purpose                                                                                                     |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                                           | PostgreSQL connection string (Neon; pooled for the app, direct for migrations)                              |
+| `BETTER_AUTH_SECRET`                                                     | Session signing secret (`openssl rand -base64 32`)                                                          |
+| `ORIGIN`, `BETTER_AUTH_URL`                                              | Public base URL of the deployment — production only; must match exactly, a wrong value 403s every form POST |
+| `VAULT_ENCRYPTION_KEY`                                                   | Vault AES-256-GCM key, base64 for exactly 32 bytes — never change it once entries exist                     |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | Private Cloudflare R2 bucket for media                                                                      |
+| `SEED_ADMIN_*`, `SEED_TEST_*`                                            | Dev-only seed accounts (`bun run db:seed`) — never set in production                                        |
 
 ## Development
 
