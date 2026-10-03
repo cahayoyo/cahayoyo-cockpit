@@ -1,4 +1,3 @@
-import Bookmark from '@lucide/svelte/icons/bookmark';
 import Lock from '@lucide/svelte/icons/lock';
 import Mail from '@lucide/svelte/icons/mail';
 import NotebookPen from '@lucide/svelte/icons/notebook-pen';
@@ -11,7 +10,6 @@ import { ADMIN_ROLE } from '$lib/roles';
 
 export const NAV_ITEMS = [
 	{ href: '/', label: 'Cockpit', icon: Plane },
-	{ href: '/bookmarks', label: 'Bookmarks', icon: Bookmark },
 	{ href: '/notes', label: 'Notes', icon: NotebookPen },
 	{ href: '/tasks', label: 'Tasks', icon: SquareCheckBig },
 	{ href: '/toolkit', label: 'Toolkit', icon: Wrench },

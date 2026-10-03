@@ -49,7 +49,7 @@ export function folderLabel(folders: readonly FolderRow[], id: string): string {
 }
 
 // Deleting a folder removes exactly this set of rows (DB cascade) and unfiles
-// the bookmarks whose folder_id is in it (FK SET NULL).
+// the notes whose folder_id is in it (FK SET NULL).
 export function folderIdsWithDescendants(folders: readonly FolderRow[], id: string): Set<string> {
 	const childrenByParent = new Map<string, FolderRow[]>();
 	for (const folder of folders) {

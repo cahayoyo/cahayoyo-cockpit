@@ -16,7 +16,7 @@ export type EmailItem = {
 };
 
 // Filter patch: omitted keys keep their current value, `null` clears the filter
-// (same convention as the bookmarks and tasks toolbars).
+// (same convention as the tasks toolbar).
 export type EmailFilterPatch = {
 	q?: string;
 	status?: string;

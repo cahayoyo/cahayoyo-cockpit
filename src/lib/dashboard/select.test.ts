@@ -3,7 +3,6 @@ import type { FilterableTask } from '$lib/tasks/filters';
 import {
 	ACTIVE_TASK_STATUSES,
 	selectActiveTasks,
-	selectFavoriteBookmarks,
 	selectRecentNotes,
 	selectRecentVault
 } from './select';
@@ -72,19 +71,6 @@ describe('selectRecentNotes', () => {
 		const items = selectRecentNotes(notes);
 
 		expect(items.map((note) => note.id)).toEqual(['n5', 'n4', 'n3', 'n2', 'n1']);
-	});
-});
-
-describe('selectFavoriteBookmarks', () => {
-	test('keeps favorites only, capped at 6', () => {
-		const bookmarks = Array.from({ length: 8 }, (_, index) => ({
-			id: `b${index}`,
-			favorite: index !== 3
-		}));
-
-		const items = selectFavoriteBookmarks(bookmarks);
-
-		expect(items.map((bookmark) => bookmark.id)).toEqual(['b0', 'b1', 'b2', 'b4', 'b5', 'b6']);
 	});
 });
 

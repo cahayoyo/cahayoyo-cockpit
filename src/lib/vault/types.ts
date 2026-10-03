@@ -21,7 +21,7 @@ export type VaultEntryItem = {
 };
 
 // Filter patch: omitted keys keep their current value (same convention as the
-// emails and bookmarks toolbars).
+// emails and tasks toolbars).
 export type VaultFilterPatch = {
 	q?: string;
 	type?: string;
