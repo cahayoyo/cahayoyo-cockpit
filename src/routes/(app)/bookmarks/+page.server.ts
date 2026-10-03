@@ -16,7 +16,7 @@ import { optionalId, requiredId, text } from '$lib/server/form-data';
 import { folderExists, listFolders } from '$lib/server/folders';
 import { deleteMedia, getMediaFile, listMedia } from '$lib/server/media';
 import { requireUserId } from '$lib/server/session';
-import { listTags } from '$lib/server/tags';
+import { listTagNames, listTags } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
 const idSchema = z.uuid();
@@ -25,10 +25,11 @@ const favoriteSchema = z.enum(['true', 'false']);
 export const load: PageServerLoad = async ({ url, locals }) => {
 	const ownerId = requireUserId(locals);
 	const filters = parseBookmarkSearch(url.searchParams);
-	const [bookmarks, folders, tags, media] = await Promise.all([
+	const [bookmarks, folders, tags, tagSuggestions, media] = await Promise.all([
 		listBookmarks(ownerId),
 		listFolders(ownerId, 'bookmark'),
 		listTags(ownerId, 'bookmark'),
+		listTagNames(ownerId),
 		listMedia(ownerId)
 	]);
 
@@ -43,6 +44,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		items: filterBookmarks(bookmarks, scope),
 		folders,
 		tags,
+		tagSuggestions,
 		media
 	};
 };

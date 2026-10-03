@@ -206,7 +206,7 @@
 	bookmark={editing}
 	media={data.media}
 	folders={data.folders}
-	tags={data.tags}
+	tags={data.tagSuggestions}
 	oncreate={createFolder}
 />
 

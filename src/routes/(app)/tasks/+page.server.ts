@@ -14,7 +14,7 @@ import {
 } from '$lib/server/tasks';
 import { projectNameSchema } from '$lib/server/tasks-schemas';
 import { requireUserId } from '$lib/server/session';
-import { listTags } from '$lib/server/tags';
+import { listTagNames } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
 // The page derives every view from one unfiltered task list: subtask progress,
@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const [projects, tasks, tags] = await Promise.all([
 		listProjects(ownerId),
 		listTasks(ownerId, ALL_TASKS),
-		listTags(ownerId, 'task')
+		listTagNames(ownerId)
 	]);
 
 	return {

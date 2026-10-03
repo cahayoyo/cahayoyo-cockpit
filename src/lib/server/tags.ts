@@ -16,6 +16,21 @@ export async function listTags(ownerId: string, kind: TagKind): Promise<string[]
 }
 
 /**
+ * Every tag name the owner has, across all modules. Feeds the tag-input
+ * suggestions so a tag created in one module is offered in the others; the
+ * underlying rows stay per-module (see `listTags`).
+ */
+export async function listTagNames(ownerId: string): Promise<string[]> {
+	const rows = await db
+		.selectDistinct({ name: tag.name })
+		.from(tag)
+		.where(eq(tag.ownerId, ownerId))
+		.orderBy(asc(tag.name));
+
+	return rows.map((row) => row.name);
+}
+
+/**
  * Resolves tag names to the owner's tag ids within one module's namespace,
  * creating the missing rows. Callers insert the ids into their own link table
  * inside the same transaction.
