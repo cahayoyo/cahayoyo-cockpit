@@ -1,9 +1,9 @@
 <script lang="ts">
 	// Note editor pane: inline title, save indicator + explicit Save, pin/delete, the
 	// segmented pane picker (Source | Preview, defaults to Source),
-	// folder picker (root label "Notes"), inline tags, CodeMirror 6 source with the
-	// markdown-it preview and one-way source → preview scroll sync, plus the save model
-	// (1000ms autosave, Save + Ctrl/Cmd+S, flush on blur/switch/hidden/navigation).
+	// folder picker (root label "Notes"), inline tags, CodeMirror 6 source and the
+	// markdown-it preview, plus the save model (1000ms autosave, Save + Ctrl/Cmd+S,
+	// flush on blur/switch/hidden/navigation).
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
