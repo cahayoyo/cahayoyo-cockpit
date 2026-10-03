@@ -27,8 +27,7 @@ export type ProjectItem = {
 export type TaskProgress = { done: number; total: number };
 
 // URL-filter patch: omitted keys keep their current value, `null` clears the
-// filter (same convention as the bookmarks toolbar). `view` switches the
-// list/kanban toggle.
+// filter. `view` switches the list/kanban toggle.
 export type TaskFilterPatch = {
 	projectId?: string | null;
 	status?: string;

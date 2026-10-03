@@ -12,13 +12,11 @@ export type ActiveTaskStatus = (typeof ACTIVE_TASK_STATUSES)[number];
 
 const ACTIVE_LIMIT = 5;
 const RECENT_NOTES_LIMIT = 5;
-const FAVORITE_BOOKMARKS_LIMIT = 6;
 const RECENT_VAULT_LIMIT = 5;
 
 type StatusTask = { status: string };
 type DatedNote = { updatedAt: Date };
 type DatedVaultEntry = { updatedAt: Date };
-type FavoriteBookmark = { favorite: boolean };
 
 function isActiveStatus(status: string): status is ActiveTaskStatus {
 	return (ACTIVE_TASK_STATUSES as readonly string[]).includes(status);
@@ -48,11 +46,6 @@ export function selectRecentNotes<T extends DatedNote>(notes: readonly T[]): T[]
 	return [...notes]
 		.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 		.slice(0, RECENT_NOTES_LIMIT);
-}
-
-/** Favorite bookmarks only, capped. */
-export function selectFavoriteBookmarks<T extends FavoriteBookmark>(bookmarks: readonly T[]): T[] {
-	return bookmarks.filter((bookmark) => bookmark.favorite).slice(0, FAVORITE_BOOKMARKS_LIMIT);
 }
 
 /** The most recently updated vault entries, capped. */

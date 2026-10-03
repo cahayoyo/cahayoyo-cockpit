@@ -7,7 +7,7 @@ export function parseTags(input: string): string[] {
 	return [...new Set(tags)];
 }
 
-// Groups link rows (`{ id, name }`, id = the owning bookmark/note) into tag
+// Groups link rows (`{ id, name }`, id = the owning note/task/vault item) into tag
 // names per owner, in the order the query returned them.
 export function groupTagNames(
 	links: readonly { id: string; name: string }[]

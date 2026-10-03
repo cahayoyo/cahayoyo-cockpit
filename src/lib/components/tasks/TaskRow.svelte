@@ -1,7 +1,7 @@
 <script lang="ts">
 	// One task row (list views): title, optional project/parent label, due date,
 	// subtask progress, tags, status + priority badges, kebab (Move to / Delete).
-	// The title button stretches over the row, like the bookmark list rows.
+	// The title button stretches over the row.
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { PRIORITY_META, STATUS_META } from '$lib/tasks/presentation.js';
 	import { cn } from '$lib/utils.js';
