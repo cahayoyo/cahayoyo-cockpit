@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Note editor pane: inline title, save indicator + explicit Save, pin/delete, the
-	// segmented pane picker (desktop Source | Split | Preview, narrow Source | Preview),
+	// segmented pane picker (Source | Preview, defaults to Source),
 	// folder picker (root label "Notes"), inline tags, CodeMirror 6 source with the
 	// markdown-it preview and one-way source → preview scroll sync, plus the save model
 	// (1000ms autosave, Save + Ctrl/Cmd+S, flush on blur/switch/hidden/navigation).
@@ -29,7 +29,7 @@
 	import MarkdownPreview from './MarkdownPreview.svelte';
 	import type { NoteItem } from './types.js';
 
-	type Pane = 'source' | 'split' | 'preview';
+	type Pane = 'source' | 'preview';
 
 	let {
 		note,
@@ -53,12 +53,7 @@
 		onCreateFolder: (parentId: string | null, name: string) => Promise<string | null>;
 	} = $props();
 
-	const DESKTOP_PANES: { key: Pane; name: string }[] = [
-		{ key: 'source', name: 'Source' },
-		{ key: 'split', name: 'Split' },
-		{ key: 'preview', name: 'Preview' }
-	];
-	const NARROW_PANES: { key: Pane; name: string }[] = [
+	const PANES: { key: Pane; name: string }[] = [
 		{ key: 'source', name: 'Source' },
 		{ key: 'preview', name: 'Preview' }
 	];
@@ -76,15 +71,10 @@
 	let loadedId = $state<string | null>(untrack(() => note.id));
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-	let desktopPane = $state<Pane>('split');
-	let narrowPane = $state<'source' | 'preview'>('source');
+	let pane = $state<Pane>('source');
 
-	function setDesktopPane(pane: Pane): void {
-		desktopPane = pane;
-	}
-
-	function setNarrowPane(pane: Pane): void {
-		narrowPane = pane === 'preview' ? 'preview' : 'source';
+	function setPane(next: Pane): void {
+		pane = next;
 	}
 
 	function scheduleSave(): void {
@@ -189,8 +179,6 @@
 	// ---- CodeMirror 6 source ------------------------------------------------
 	let cmHost = $state<HTMLDivElement | null>(null);
 	let cmView = $state<EditorView | null>(null);
-	let sourceEl: HTMLElement | null = null;
-	let previewEl = $state<HTMLElement | null>(null);
 	let applyingExternal = false;
 
 	const cmTheme = EditorView.theme({
@@ -236,14 +224,10 @@
 		});
 
 		cmView = view;
-		sourceEl = view.scrollDOM;
-		view.scrollDOM.addEventListener('scroll', syncPreview);
 
 		return () => {
-			view.scrollDOM.removeEventListener('scroll', syncPreview);
 			view.destroy();
 			cmView = null;
-			sourceEl = null;
 		};
 	});
 
@@ -258,15 +242,6 @@
 		view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: next } });
 		applyingExternal = false;
 	});
-
-	// One-way proportional sync: source → preview, Split only.
-	function syncPreview(): void {
-		if (desktopPane !== 'split' || !sourceEl || !previewEl) return;
-		const fromMax = sourceEl.scrollHeight - sourceEl.clientHeight;
-		const toMax = previewEl.scrollHeight - previewEl.clientHeight;
-		if (fromMax <= 0 || toMax <= 0) return;
-		previewEl.scrollTop = (sourceEl.scrollTop / fromMax) * toMax;
-	}
 
 	// ---- paste-to-upload ----------------------------------------------------
 	function onPaste(event: ClipboardEvent): boolean {
@@ -430,8 +405,7 @@
 </header>
 
 <div class="flex flex-wrap items-center gap-2 border-b border-border px-3 py-1.5">
-	<div class="max-lg:hidden">{@render panePicker(DESKTOP_PANES, desktopPane, setDesktopPane)}</div>
-	<div class="lg:hidden">{@render panePicker(NARROW_PANES, narrowPane, setNarrowPane)}</div>
+	{@render panePicker(PANES, pane, setPane)}
 
 	<FolderPicker
 		class="w-44"
@@ -462,23 +436,14 @@
 </div>
 
 <div class="flex min-h-0 flex-1">
-	<div
-		class={cn(
-			'min-w-0 flex-1 flex-col',
-			narrowPane === 'source' ? 'flex' : 'hidden',
-			desktopPane === 'preview' ? 'lg:hidden' : 'lg:flex',
-			desktopPane === 'split' && 'lg:border-r lg:border-border'
-		)}
-	>
+	<div class={cn('min-w-0 flex-1 flex-col', pane === 'source' ? 'flex' : 'hidden')}>
 		<div class="min-h-0 flex-1 overflow-hidden" bind:this={cmHost}></div>
 	</div>
 	<div
 		class={cn(
 			'min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-4',
-			narrowPane === 'preview' ? 'flex' : 'hidden',
-			desktopPane === 'source' ? 'lg:hidden' : 'lg:flex'
+			pane === 'preview' ? 'flex' : 'hidden'
 		)}
-		bind:this={previewEl}
 	>
 		<MarkdownPreview {body} />
 	</div>
