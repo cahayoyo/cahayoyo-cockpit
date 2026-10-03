@@ -17,5 +17,12 @@ export const envSchema = z.object({
 	R2_ACCOUNT_ID: z.string().min(1, 'R2_ACCOUNT_ID is required'),
 	R2_ACCESS_KEY_ID: z.string().min(1, 'R2_ACCESS_KEY_ID is required'),
 	R2_SECRET_ACCESS_KEY: z.string().min(1, 'R2_SECRET_ACCESS_KEY is required'),
-	R2_BUCKET: z.string().min(1, 'R2_BUCKET is required')
+	R2_BUCKET: z.string().min(1, 'R2_BUCKET is required'),
+	// Read at runtime by svelte-adapter-bun (SvelteKit's CSRF self-origin and
+	// absolute URLs) and by Better Auth — not by application code, so this is
+	// presence documentation only. Production only; left unset in dev. A wrong
+	// value makes every form POST fail ("Cross-site POST form submissions are
+	// forbidden"), so the value must match the public URL exactly.
+	ORIGIN: z.url().optional(),
+	BETTER_AUTH_URL: z.url().optional()
 });
