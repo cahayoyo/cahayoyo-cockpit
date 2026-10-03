@@ -1,5 +1,5 @@
-DROP TABLE "bookmark_tag" CASCADE;--> statement-breakpoint
-DROP TABLE "bookmark" CASCADE;--> statement-breakpoint
+DROP TABLE "bookmark_tag";--> statement-breakpoint
+DROP TABLE "bookmark";--> statement-breakpoint
 DELETE FROM "folder" WHERE "kind" = 'bookmark';--> statement-breakpoint
 DELETE FROM "tag" WHERE "kind" = 'bookmark';--> statement-breakpoint
 ALTER TABLE "folder" ALTER COLUMN "kind" SET DATA TYPE text;--> statement-breakpoint
