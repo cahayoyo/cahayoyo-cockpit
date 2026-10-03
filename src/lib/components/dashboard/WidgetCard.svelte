@@ -10,7 +10,6 @@
 	type WidgetHref =
 		| '/vault'
 		| '/notes'
-		| '/bookmarks?favorite=true'
 		| '/tasks?status=active'
 		| `/tasks?task=${string}`
 		| `/notes?note=${string}`;

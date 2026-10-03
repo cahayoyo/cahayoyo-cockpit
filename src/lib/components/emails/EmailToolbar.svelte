@@ -30,7 +30,7 @@
 		onnew: () => void;
 	} = $props();
 
-	// Typing is applied after a short pause (same pattern as the bookmarks toolbar).
+	// Typing is applied after a short pause.
 	let draft = $state('');
 	let emitted = $state('');
 	let timer: ReturnType<typeof setTimeout> | undefined;

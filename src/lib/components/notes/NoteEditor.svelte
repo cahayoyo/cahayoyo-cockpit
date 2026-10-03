@@ -16,7 +16,7 @@
 	import { navigating } from '$app/state';
 	import { onMount, untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { validateUpload } from '$lib/bookmarks/upload.js';
+	import { validateUpload } from '$lib/media/upload.js';
 	import { submitAction } from '$lib/forms.js';
 	import { type FolderRow } from '$lib/folders/tree.js';
 	import { formatTime } from '$lib/notes/format.js';

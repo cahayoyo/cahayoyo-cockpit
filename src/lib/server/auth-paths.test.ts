@@ -18,7 +18,7 @@ describe('isPublicPath', () => {
 
 	test('protects app routes', () => {
 		expect(isPublicPath('/')).toBe(false);
-		expect(isPublicPath('/bookmarks')).toBe(false);
+		expect(isPublicPath('/emails')).toBe(false);
 		expect(isPublicPath('/login/reset')).toBe(false);
 	});
 });

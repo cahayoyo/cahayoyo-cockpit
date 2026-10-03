@@ -2,8 +2,8 @@
 	// Editor folder menu — browser-style: hovering a folder row opens its children in a
 	// submenu (nested to any depth); clicking the row picks that folder. "New folder" in a
 	// menu level creates a folder there and picks it. The top item is the virtual root: its
-	// label is contextual per view ("Bookmarks bar" / "Notes") and means no folder.
-	// Shared by Bookmarks and Notes.
+	// label is contextual per caller ("Notes" in the note editor) and means no folder.
+	// Used by the Notes editor.
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
 	import FolderIcon from '@lucide/svelte/icons/folder';
 	import FolderPlus from '@lucide/svelte/icons/folder-plus';

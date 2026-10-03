@@ -67,7 +67,7 @@ export async function deleteFolder(
 	kind: FolderKind
 ): Promise<boolean> {
 	// Subtree removal and unfiling of contained items happen in the DB's FK
-	// actions (folder.parent_id CASCADE, bookmark/note.folder_id SET NULL).
+	// actions (folder.parent_id CASCADE, note.folder_id SET NULL).
 	const [deleted] = await db
 		.delete(folder)
 		.where(and(eq(folder.id, id), eq(folder.ownerId, ownerId), eq(folder.kind, kind)))

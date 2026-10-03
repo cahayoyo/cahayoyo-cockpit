@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Tasks toolbar: project Select + manage dialog, list/kanban toggle, filters,
 	// sort, debounced search, New task. Every control writes the URL; the page
-	// reads it back (bookmarks/notes pattern).
+	// reads it back (notes pattern).
 	import Columns3 from '@lucide/svelte/icons/columns-3';
 	import List from '@lucide/svelte/icons/list';
 	import Plus from '@lucide/svelte/icons/plus';
