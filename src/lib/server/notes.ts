@@ -1,31 +1,12 @@
-import { and, asc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, eq, ilike, or, sql } from 'drizzle-orm';
 import { likePattern, noteSnippet, sortNotes } from '$lib/notes/list';
 import type { NoteFormInput } from '$lib/notes/schemas';
-import { groupTagNames } from '$lib/tags';
-import type { Transaction } from './db';
 import { db } from './db';
-import { note, noteTag, tag } from './db/schema';
-import { ensureTagIds } from './tags';
+import { note } from './db/schema';
 
-export type NoteListItem = typeof note.$inferSelect & { tags: string[]; snippet: string };
+export type NoteListItem = typeof note.$inferSelect & { snippet: string };
 
 const UNTITLED = 'Untitled';
-
-// Tag names per note, ordered alphabetically, for the given note ids.
-async function tagsByNoteId(ids: string[]): Promise<Map<string, string[]>> {
-	if (ids.length === 0) {
-		return new Map();
-	}
-
-	const links = await db
-		.select({ id: noteTag.noteId, name: tag.name })
-		.from(noteTag)
-		.innerJoin(tag, and(eq(noteTag.tagId, tag.id), eq(tag.kind, 'note')))
-		.where(inArray(noteTag.noteId, ids))
-		.orderBy(asc(tag.name));
-
-	return groupTagNames(links);
-}
 
 // A non-empty query is the global search: it matches titles and bodies
 // case-insensitively and ignores the folder scope.
@@ -43,11 +24,8 @@ export async function listNotes(ownerId: string, query = ''): Promise<NoteListIt
 			)
 		);
 
-	const tagsByNote = await tagsByNoteId(rows.map((row) => row.id));
-
 	return sortNotes(rows).map((row) => ({
 		...row,
-		tags: tagsByNote.get(row.id) ?? [],
 		snippet: noteSnippet(row.body)
 	}));
 }
@@ -62,9 +40,7 @@ export async function getNote(ownerId: string, id: string): Promise<NoteListItem
 		return null;
 	}
 
-	const tagsByNote = await tagsByNoteId([id]);
-
-	return { ...row, tags: tagsByNote.get(id) ?? [], snippet: noteSnippet(row.body) };
+	return { ...row, snippet: noteSnippet(row.body) };
 }
 
 export async function createNote(ownerId: string, folderId: string | null = null): Promise<string> {
@@ -76,40 +52,18 @@ export async function createNote(ownerId: string, folderId: string | null = null
 	return row.id;
 }
 
-async function attachTags(
-	tx: Transaction,
-	ownerId: string,
-	noteId: string,
-	names: string[]
-): Promise<void> {
-	const tagIds = await ensureTagIds(tx, ownerId, 'note', names);
-	if (tagIds.length === 0) {
-		return;
-	}
-
-	await tx.insert(noteTag).values(tagIds.map((tagId) => ({ noteId, tagId })));
-}
-
 export async function updateNote(
 	ownerId: string,
 	id: string,
 	input: NoteFormInput
 ): Promise<Date | null> {
-	return db.transaction(async (tx) => {
-		const updated = await tx
-			.update(note)
-			.set({ title: input.title, body: input.body, folderId: input.folderId })
-			.where(and(eq(note.id, id), eq(note.ownerId, ownerId)))
-			.returning({ id: note.id, updatedAt: note.updatedAt });
+	const updated = await db
+		.update(note)
+		.set({ title: input.title, body: input.body, folderId: input.folderId })
+		.where(and(eq(note.id, id), eq(note.ownerId, ownerId)))
+		.returning({ id: note.id, updatedAt: note.updatedAt });
 
-		if (updated.length === 0) {
-			return null;
-		}
-
-		await tx.delete(noteTag).where(eq(noteTag.noteId, id));
-		await attachTags(tx, ownerId, id, input.tags);
-		return updated[0].updatedAt;
-	});
+	return updated.length === 0 ? null : updated[0].updatedAt;
 }
 
 export async function setNotePinned(
