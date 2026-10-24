@@ -14,7 +14,6 @@ import {
 	updateNote
 } from '$lib/server/notes';
 import { requireUserId } from '$lib/server/session';
-import { listTagNames } from '$lib/server/tags';
 import type { Actions, PageServerLoad } from './$types.js';
 
 const pinnedSchema = z.enum(['true', 'false']);
@@ -22,11 +21,7 @@ const pinnedSchema = z.enum(['true', 'false']);
 export const load: PageServerLoad = async ({ url, locals }) => {
 	const ownerId = requireUserId(locals);
 	const { noteId, q } = parseNoteSearch(url.searchParams);
-	const [notes, folders, tags] = await Promise.all([
-		listNotes(ownerId, q),
-		listFolders(ownerId, 'note'),
-		listTagNames(ownerId)
-	]);
+	const [notes, folders] = await Promise.all([listNotes(ownerId, q), listFolders(ownerId, 'note')]);
 
 	// The selected note is normally in the list; an active search can exclude it,
 	// so the editor keeps its note by fetching it separately (deep links too).
@@ -34,7 +29,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		? (notes.find((item) => item.id === noteId) ?? (await getNote(ownerId, noteId)))
 		: null;
 
-	return { q, notes, activeNote, folders, tags };
+	return { q, notes, activeNote, folders };
 };
 
 export const actions: Actions = {
@@ -61,8 +56,7 @@ export const actions: Actions = {
 		const parsed = noteFormSchema.safeParse({
 			title: text(formData, 'title'),
 			body: text(formData, 'body'),
-			folderId: optionalId(formData, 'folderId'),
-			tags: text(formData, 'tags')
+			folderId: optionalId(formData, 'folderId')
 		});
 
 		if (!parsed.success) {

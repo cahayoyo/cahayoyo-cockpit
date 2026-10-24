@@ -222,7 +222,6 @@
 			<NoteEditor
 				note={activeNote}
 				folders={data.folders}
-				tagSuggestions={data.tags}
 				{focusTitleAt}
 				onFocusHandled={() => (focusTitleAt = 0)}
 				onTogglePin={(note) => void togglePin(note)}

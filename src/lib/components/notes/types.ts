@@ -5,6 +5,5 @@ export type NoteItem = {
 	folderId: string | null;
 	pinned: boolean;
 	updatedAt: Date;
-	tags: string[];
 	snippet: string;
 };

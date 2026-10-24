@@ -1,9 +1,7 @@
 <script lang="ts">
-	// Note editor pane: inline title, save indicator + explicit Save, pin/delete, the
-	// segmented pane picker (Source | Preview, defaults to Source),
-	// folder picker (root label "Notes"), inline tags, CodeMirror 6 source and the
-	// markdown-it preview, plus the save model (1000ms autosave, Save + Ctrl/Cmd+S,
-	// flush on blur/switch/hidden/navigation).
+	// Note editor: inline title, save indicator + explicit Save, pin/delete, folder
+	// picker (root label "Notes"), the CodeMirror 6 markdown source, plus the save
+	// model (1000ms autosave, Save + Ctrl/Cmd+S, flush on blur/switch/hidden/navigation).
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import LoaderCircle from '@lucide/svelte/icons/loader-circle';
 	import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
@@ -24,17 +22,11 @@
 	import FolderPicker from '$lib/components/FolderPicker.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { cn } from '$lib/utils.js';
-	import MarkdownPreview from './MarkdownPreview.svelte';
 	import type { NoteItem } from './types.js';
-
-	type Pane = 'source' | 'preview';
 
 	let {
 		note,
 		folders,
-		tagSuggestions,
 		focusTitleAt,
 		onFocusHandled,
 		onTogglePin,
@@ -44,7 +36,6 @@
 	}: {
 		note: NoteItem;
 		folders: FolderRow[];
-		tagSuggestions: string[];
 		focusTitleAt: number;
 		onFocusHandled: () => void;
 		onTogglePin: (note: NoteItem) => void;
@@ -53,29 +44,17 @@
 		onCreateFolder: (parentId: string | null, name: string) => Promise<string | null>;
 	} = $props();
 
-	const PANES: { key: Pane; name: string }[] = [
-		{ key: 'source', name: 'Source' },
-		{ key: 'preview', name: 'Preview' }
-	];
-
 	// ---- editor state + save model ------------------------------------------
 	// Seeded from the note prop so SSR renders the selected note; the effect below
 	// only reacts to later changes (note switch, adopted server state). The prop is
 	// read with untrack: these are one-time initial values, not live bindings.
 	let title = $state(untrack(() => note.title));
 	let body = $state(untrack(() => note.body));
-	let tagsText = $state(untrack(() => note.tags.join(', ')));
 	let folderId = $state<string | null>(untrack(() => note.folderId));
 	let lastServerFolderId = $state<string | null>(untrack(() => note.folderId));
 	let saveState = $state<NoteSaveState>(untrack(() => initialSaveState(note.updatedAt)));
 	let loadedId = $state<string | null>(untrack(() => note.id));
 	let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-
-	let pane = $state<Pane>('source');
-
-	function setPane(next: Pane): void {
-		pane = next;
-	}
 
 	function scheduleSave(): void {
 		clearTimeout(debounceTimer);
@@ -103,7 +82,7 @@
 
 		const outcome = await submitAction(
 			'?/saveNote',
-			{ id, title, body, folderId: folderId ?? '', tags: tagsText },
+			{ id, title, body, folderId: folderId ?? '' },
 			{ invalidate: false, keepalive }
 		);
 
@@ -143,7 +122,6 @@
 			clearTimeout(debounceTimer);
 			title = note.title;
 			body = note.body;
-			tagsText = note.tags.join(', ');
 			folderId = note.folderId;
 			lastServerFolderId = note.folderId;
 			saveState = initialSaveState(note.updatedAt);
@@ -181,6 +159,11 @@
 	let cmView = $state<EditorView | null>(null);
 	let applyingExternal = false;
 
+	// drawSelection hides the native caret and paints its own layers, whose defaults
+	// (a black caret, #d9d9d9 / #d7d4f0 selections) ignore the app theme and vanish on
+	// the dark background. Drive both layers from the tokens instead.
+	const selectionColor = 'color-mix(in oklab, var(--foreground) 30%, transparent)';
+
 	const cmTheme = EditorView.theme({
 		'&': {
 			height: '100%',
@@ -191,6 +174,14 @@
 		'&.cm-focused': { outline: 'none' },
 		'.cm-scroller': { fontFamily: 'inherit', lineHeight: '1.6' },
 		'.cm-content': { padding: '12px 0' },
+		// The base theme hardcodes the caret and selection colors; these selectors match
+		// or beat its specificity so the tokens win in both themes.
+		'.cm-scroller .cm-content': { caretColor: 'var(--foreground)' },
+		'.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--foreground)' },
+		'.cm-scroller .cm-selectionLayer .cm-selectionBackground': { backgroundColor: selectionColor },
+		'&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+			backgroundColor: selectionColor
+		},
 		'.cm-gutters': {
 			backgroundColor: 'transparent',
 			borderRight: '1px solid var(--border)',
@@ -405,8 +396,6 @@
 </header>
 
 <div class="flex flex-wrap items-center gap-2 border-b border-border px-3 py-1.5">
-	{@render panePicker(PANES, pane, setPane)}
-
 	<FolderPicker
 		class="w-44"
 		bind:value={folderId}
@@ -416,63 +405,8 @@
 		oncreate={onCreateFolder}
 		onpick={markEdit}
 	/>
-
-	<div class="min-w-0 flex-1">
-		<Input
-			bind:value={tagsText}
-			list="note-tags"
-			placeholder="Tags — qa, docs"
-			aria-label="Tags"
-			class="max-lg:h-11"
-			oninput={markEdit}
-			onblur={() => void flush()}
-		/>
-		<datalist id="note-tags">
-			{#each tagSuggestions as tag (tag)}
-				<option value={tag}></option>
-			{/each}
-		</datalist>
-	</div>
 </div>
 
-<div class="flex min-h-0 flex-1">
-	<div class={cn('min-w-0 flex-1 flex-col', pane === 'source' ? 'flex' : 'hidden')}>
-		<div class="min-h-0 flex-1 overflow-hidden" bind:this={cmHost}></div>
-	</div>
-	<div
-		class={cn(
-			'min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-4',
-			pane === 'preview' ? 'flex' : 'hidden'
-		)}
-	>
-		<MarkdownPreview {body} />
-	</div>
+<div class="flex min-h-0 flex-1 flex-col">
+	<div class="min-h-0 flex-1 overflow-hidden" bind:this={cmHost}></div>
 </div>
-
-{#snippet panePicker(
-	options: { key: Pane; name: string }[],
-	active: Pane,
-	onpick: (pane: Pane) => void
-)}
-	<div
-		class="flex gap-0.5 rounded-lg border border-border p-0.5"
-		role="group"
-		aria-label="Editor layout"
-	>
-		{#each options as option (option.key)}
-			<button
-				type="button"
-				class={cn(
-					'rounded-md px-2 py-0.5 text-xs font-medium transition-colors max-lg:min-h-11 max-lg:px-3',
-					active === option.key
-						? 'bg-accent text-foreground'
-						: 'text-muted-foreground hover:bg-accent/50'
-				)}
-				aria-pressed={active === option.key}
-				onclick={() => onpick(option.key)}
-			>
-				{option.name}
-			</button>
-		{/each}
-	</div>
-{/snippet}
