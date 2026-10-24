@@ -129,7 +129,7 @@ export const vaultEntryType = pgEnum('vault_entry_type', ['login', 'api_key', 'n
 // to notes, and a tag to exactly one of the three tagged modules.
 export const folderKind = pgEnum('folder_kind', ['note']);
 
-export const tagKind = pgEnum('tag_kind', ['note', 'task', 'vault']);
+export const tagKind = pgEnum('tag_kind', ['task', 'vault']);
 
 export const media = pgTable(
 	'media',
@@ -290,19 +290,6 @@ export const tag = pgTable(
 		index('tag_owner_kind_idx').on(table.ownerId, table.kind),
 		unique('tag_owner_kind_name_unique').on(table.ownerId, table.kind, table.name)
 	]
-);
-
-export const noteTag = pgTable(
-	'note_tag',
-	{
-		noteId: uuid('note_id')
-			.notNull()
-			.references(() => note.id, { onDelete: 'cascade' }),
-		tagId: uuid('tag_id')
-			.notNull()
-			.references(() => tag.id, { onDelete: 'cascade' })
-	},
-	(table) => [primaryKey({ columns: [table.noteId, table.tagId] })]
 );
 
 export const taskTag = pgTable(
