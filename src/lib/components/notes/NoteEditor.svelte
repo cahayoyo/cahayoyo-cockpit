@@ -181,6 +181,11 @@
 	let cmView = $state<EditorView | null>(null);
 	let applyingExternal = false;
 
+	// drawSelection hides the native caret and paints its own layers, whose defaults
+	// (a black caret, #d9d9d9 / #d7d4f0 selections) ignore the app theme and vanish on
+	// the dark background. Drive both layers from the tokens instead.
+	const selectionColor = 'color-mix(in oklab, var(--foreground) 30%, transparent)';
+
 	const cmTheme = EditorView.theme({
 		'&': {
 			height: '100%',
@@ -191,6 +196,14 @@
 		'&.cm-focused': { outline: 'none' },
 		'.cm-scroller': { fontFamily: 'inherit', lineHeight: '1.6' },
 		'.cm-content': { padding: '12px 0' },
+		// The base theme hardcodes the caret and selection colors; these selectors match
+		// or beat its specificity so the tokens win in both themes.
+		'.cm-scroller .cm-content': { caretColor: 'var(--foreground)' },
+		'.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--foreground)' },
+		'.cm-scroller .cm-selectionLayer .cm-selectionBackground': { backgroundColor: selectionColor },
+		'&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+			backgroundColor: selectionColor
+		},
 		'.cm-gutters': {
 			backgroundColor: 'transparent',
 			borderRight: '1px solid var(--border)',
