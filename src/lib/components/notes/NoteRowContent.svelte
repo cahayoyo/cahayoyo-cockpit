@@ -1,11 +1,9 @@
 <script lang="ts">
 	// One shared row body for the Notes list and the dashboard "Recent notes"
-	// widget: title (+ optional pin), clamped preview, relative time, tag
-	// badges. The interactive wrapper differs per surface (link vs button).
+	// widget: title (+ optional pin), clamped preview and relative time. The
+	// interactive wrapper differs per surface (link vs button).
 	import Pin from '@lucide/svelte/icons/pin';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { formatRelativeTime } from '$lib/notes/format.js';
-	import { tagBadgeClass } from '$lib/notes/tag-badges.js';
 	import type { NoteItem } from './types.js';
 
 	let { note, showPin = false }: { note: NoteItem; showPin?: boolean } = $props();
@@ -24,7 +22,4 @@
 	<span class="text-xs text-muted-foreground tabular-nums">
 		{formatRelativeTime(note.updatedAt)}
 	</span>
-	{#each note.tags as tag (tag)}
-		<Badge variant="outline" class={tagBadgeClass(tag)}>{tag}</Badge>
-	{/each}
 </div>
